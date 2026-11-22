@@ -82,7 +82,12 @@ class MotionPipeline:
         return out
 
     def pose(self, tele, dt=SIM['dt']):
-        """遥测 dict → 6DOF 位姿 [x,y,z,roll,pitch,yaw] (m, rad)。"""
+        """遥测 dict → 6DOF 位姿 [x,y,z,roll,pitch,yaw] (m, rad)。
+
+        注意：本方法会推进 speed_limiter / washout / 低通的状态。
+        pose() 与 displacements_mm() 不要在同一帧混用（后者内部也调 pose），
+        否则限速器状态会被推进两次。仿真端只用 pose()，实机桥接只用 displacements_mm()。
+        """
         tele = self._lowpass(tele, dt)
         if self.accel_model:
             p = accel_driven_pose(tele, dt, self.wo)

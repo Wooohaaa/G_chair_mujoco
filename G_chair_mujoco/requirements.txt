@@ -3,3 +3,5 @@ numpy>=1.24
 matplotlib>=3.7
 imageio>=2.31
 imageio-ffmpeg>=0.4
+pyserial>=3.5          # G_chair_hw/serial_bridge.py, debug_panel.py
+websockets>=12.0       # G_chair_hw/debug_panel.py 的 WebSocket 服务
