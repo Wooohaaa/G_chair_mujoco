@@ -38,8 +38,34 @@ from config import FILTERS
 ZERO_TELE = {}   # 空 dict → PoseFromMotion 各通道取 0 → 平台平滑回中位
 
 
-def telemetry_to_pose(tele, dt, mapper, filt):
+class AccelLowPass:
+    """对加速度/角速度遥测先做一阶低通，压掉 GTA5 碰撞尖峰。
+
+    只滤波遥测输入 (G / rad/s)，不改 Mapper/FilterChain，所以 FlyPT 链路语义不变。
+    tau 越大越平滑但延迟越高；0.15s 是之前诊断实测的折中值。
+    """
+    def __init__(self, tau):
+        self.tau = tau
+        self.v = {}
+
+    def update(self, tele, dt):
+        if self.tau <= 0:
+            return tele
+        a = dt / (self.tau + dt)
+        out = dict(tele)
+        for k in ('accel_x', 'accel_z', 'accel_y', 'rot_x', 'rot_y', 'rot_z'):
+            x = float(tele.get(k, 0.0))
+            prev = self.v.get(k, x)
+            v = (1 - a) * prev + a * x
+            self.v[k] = v
+            out[k] = v
+        return out
+
+
+def telemetry_to_pose(tele, dt, mapper, filt, lp=None):
     """遥测 dict → [x,y,z,roll,pitch,yaw] (m, rad), 复用 G_chair_sim 的映射/滤波。"""
+    if lp is not None:
+        tele = lp.update(tele, dt)
     pf = mapper.apply_filters(mapper.compute(tele, dt), filt, dt)
     return np.array([
         pf['sway'] / 1000.0, pf['surge'] / 1000.0, pf['heave'] / 1000.0,
@@ -118,6 +144,9 @@ def run(args):
     sim = GChairSim()
     mapper = PoseFromMotion()
     filt = FilterChain(FILTERS)
+    lp = AccelLowPass(args.lpf) if args.lpf > 0 else None
+    if lp is not None:
+        print('[lpf] 遥测低通 tau=%.2fs (抑制尖峰)' % args.lpf)
 
     if args.tcp:
         rx = TcpTelemetrySource(args.host, args.port)
@@ -166,7 +195,7 @@ def run(args):
                 lost += 1
             else:
                 tele, _age = item
-                cmd = telemetry_to_pose(tele, dt_ctrl, mapper, filt)
+                cmd = telemetry_to_pose(tele, dt_ctrl, mapper, filt, lp)
 
             disp, lim = sim.command_pose(cmd, dt_ctrl)
             sim.step()
@@ -234,6 +263,8 @@ def main():
     ap.add_argument('--host', default='0.0.0.0', help='UDP 监听地址 / TCP 连接目标')
     ap.add_argument('--port', type=int, default=4124, help='端口 (与 DCS Lua 一致)')
     ap.add_argument('--tcp', action='store_true', help='TCP 客户端模式 (配合 adb forward)')
+    ap.add_argument('--lpf', type=float, default=0.0,
+                    help='遥测加速度低通时间常数秒 (0=关闭, 推荐 0.15 抑制碰撞尖峰)')
     ap.add_argument('--wait', type=float, default=10.0, help='等待首帧的秒数')
     ap.add_argument('--stale', type=float, default=0.5, help='超过该秒数视为断流(回中位)')
     ap.add_argument('--ctrl-hz', type=float, default=50.0)
