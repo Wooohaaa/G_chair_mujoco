@@ -16,7 +16,7 @@ FlyPT / 游戏遥测 ──> 6DOF 位姿 ──> 滤波 ──> 逆运动学 IK 
 | `G_chair_mujoco/` | **主体**：MuJoCo 模型、IK/FK、场景驱动、查看/渲染、校验 |
 | `G_chair_sim/` | 上游数据链：遥测生成 → 姿态映射 → FlyPT 滤波 → IK → 控制器/串口仿真 |
 | `G_chair_gta5/` | GTA5 游戏机端 UDP 遥测发送脚本（ScriptHookV + SHVDN） |
-| `G_chair_esp32/` | ESP32-S3 单板控制器固件（6 路 RMT 步进，替代双 Mega2560） |
+| `G_chair_esp32/` | ESP32-S3 单板控制器固件（6 路 RMT 步进，替代双 Mega2560）。总体说明见 `REPLACING_DUAL_MEGA.md`，画板规格见 `BOARD_SPEC.md` |
 | `motion_pipeline.py` | **仿真与实机共用的映射管线**：遥测→低通→加速度驱动映射→洗出→6DOF→IK→缸位移 |
 
 ### 仿真 = 实机：共用一套映射
