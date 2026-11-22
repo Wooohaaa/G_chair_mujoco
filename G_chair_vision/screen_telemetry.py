@@ -21,7 +21,10 @@ RK3566 部署:
   # 本机自测（合成路面动画，不需要摄像头/RKNN）
   ./.venv/bin/python screen_telemetry.py --mock --ip 127.0.0.1 --duration 20
 
-  # RK3566 实机（HDMI采集卡 /dev/video9）
+  # 板子没联网时: TCP server + 电脑 adb forward（见 README）
+  python3 screen_telemetry.py --mock --transport tcp --port 4124 --hz 20
+
+  # RK3566 实机（HDMI采集卡 /dev/video9，同网段直发 UDP）
   python3 screen_telemetry.py --source /dev/video9 --ip 10.148.82.176
 """
 
@@ -265,12 +268,64 @@ def build_telemetry(m, speed, speed_lat, valid, t):
     return d
 
 
+class TelemetrySender:
+    """UDP 直发 或 TCP server（配合 adb forward，板子无网络时用）。"""
+
+    def __init__(self, transport, ip, port):
+        self.transport = transport
+        self.remote = (ip, port)
+        self.sock = None
+        self.conn = None
+        if transport == 'udp':
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            print('[udp] -> %s:%d' % self.remote)
+        else:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.sock.bind(('0.0.0.0', port))
+            self.sock.listen(1)
+            self.sock.settimeout(0.5)
+            print('[tcp] 监听 0.0.0.0:%d，等待电脑连接（先起板子，再 adb forward + 电脑端）' % port)
+
+    def send(self, payload):
+        data = payload.encode('ascii')
+        if self.transport == 'udp':
+            self.sock.sendto(data, self.remote)
+            return True
+        # TCP: 等连接 / 处理断线重连
+        while True:
+            if self.conn is not None:
+                try:
+                    self.conn.sendall(data + b'\n')
+                    return True
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    print('[tcp] 客户端断开，等待重连')
+                    try:
+                        self.conn.close()
+                    except Exception:
+                        pass
+                    self.conn = None
+            try:
+                self.conn, addr = self.sock.accept()
+                print('[tcp] 客户端已连接 %s' % (addr,))
+            except socket.timeout:
+                return False
+
+    def close(self):
+        if self.conn:
+            self.conn.close()
+        if self.sock:
+            self.sock.close()
+
+
 def main():
-    ap = argparse.ArgumentParser(description='RK3566 视觉节点 → 25浮点UDP')
+    ap = argparse.ArgumentParser(description='RK3566 视觉节点 → 25浮点 UDP/TCP')
     ap.add_argument('--source', default='/dev/video9', help='视频源: /dev/videoN 或视频文件')
     ap.add_argument('--mock', action='store_true', help='合成路面动画（本机自测）')
-    ap.add_argument('--ip', default='127.0.0.1', help='仿真PC IP')
+    ap.add_argument('--ip', default='127.0.0.1', help='仿真PC IP (UDP 模式用)')
     ap.add_argument('--port', type=int, default=4124)
+    ap.add_argument('--transport', choices=['udp', 'tcp'], default='udp',
+                    help='tcp = 板子作 TCP server，配合电脑 adb forward 使用')
     ap.add_argument('--yolo', action='store_true', help='启用 RKNN YOLO 语义门控')
     ap.add_argument('--model', default=None, help='yolov8n.rknn 路径')
     ap.add_argument('--debug-dir', default=None, help='保存调试帧目录')
@@ -292,9 +347,8 @@ def main():
 
     motion = VisionMotion(use_yolo=args.yolo, model_path=args.model,
                           debug_dir=args.debug_dir)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    remote = (args.ip, args.port)
-    print('[udp] -> %s:%d @ %.0fHz' % (remote[0], remote[1], args.hz))
+    sender = TelemetrySender(args.transport, args.ip, args.port)
+    print('[send] @ %.0fHz' % args.hz)
 
     t0 = time.time()
     frames = 0
@@ -313,7 +367,7 @@ def main():
             m, raw, speed, valid = motion.process(frame, t)
             tele = build_telemetry(m, speed, 0.0, valid, t)
             payload = ' '.join('%.4f' % tele[k] for k in TELEMETRY_CHANNELS)
-            sock.sendto(payload.encode('ascii'), remote)
+            sender.send(payload)
             frames += 1
             if frames % 20 == 0:
                 print(' t=%.1fs 速度代理=%.2f  accel=%s  滤波后=%s' %
@@ -323,7 +377,7 @@ def main():
     except KeyboardInterrupt:
         print('\n停止')
     finally:
-        sock.close()
+        sender.close()
         if cap:
             cap.release()
     print('共发送 %d 帧' % frames)

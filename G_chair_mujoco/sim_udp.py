@@ -17,7 +17,9 @@ sim_udp.py — 用另一台电脑发来的 UDP 遥测驱动本机 MuJoCo 仿真�
 import argparse
 import math
 import os
+import socket
 import sys
+import threading
 import time
 
 import numpy as np
@@ -28,7 +30,7 @@ sys.path.insert(0, SIM_DIR)
 
 from sim import GChairSim, OUTPUT, plot_log
 
-from udp_telemetry import UdpTelemetryReceiver
+from udp_telemetry import UdpTelemetryReceiver, parse_datagram
 from pose_from_motion import PoseFromMotion
 from filters import FilterChain
 from config import FILTERS
@@ -45,15 +47,84 @@ def telemetry_to_pose(tele, dt, mapper, filt):
     ])
 
 
+class TcpTelemetrySource:
+    """TCP 客户端：配合 adb forward，板子作 server，后台线程收包。"""
+
+    def __init__(self, host, port):
+        self.remote = (host, port)
+        self.sock = None
+        self.buf = b''
+        self.latest = None
+        self.recv_time = 0.0
+        self.frames = 0
+        self.bad = 0
+        self._lock = threading.Lock()
+        self._running = False
+        self._thread = None
+
+    def start(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(0.2)
+        self.sock.connect(self.remote)
+        self._running = True
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+        print('[tcp] 已连接 %s:%d' % self.remote)
+
+    def _loop(self):
+        while self._running:
+            try:
+                chunk = self.sock.recv(8192)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            if not chunk:
+                break
+            self.buf += chunk
+            while b'\n' in self.buf:
+                line, self.buf = self.buf.split(b'\n', 1)
+                tele = parse_datagram(line)
+                with self._lock:
+                    if tele is None:
+                        self.bad += 1
+                    else:
+                        self.latest = tele
+                        self.recv_time = time.time()
+                        self.frames += 1
+
+    def get(self, max_age=None):
+        with self._lock:
+            if self.latest is None:
+                return None
+            age = time.time() - self.recv_time
+            if max_age is not None and age > max_age:
+                return None
+            return dict(self.latest), age
+
+    def stop(self):
+        self._running = False
+        if self._thread is not None:
+            self._thread.join(timeout=1.0)
+        if self.sock:
+            self.sock.close()
+
+    def stats(self):
+        return '收包 %d, 坏包 %d' % (self.frames, self.bad)
+
+
 def run(args):
     dt_ctrl = 1.0 / args.ctrl_hz
     sim = GChairSim()
     mapper = PoseFromMotion()
     filt = FilterChain(FILTERS)
 
-    rx = UdpTelemetryReceiver(args.host, args.port)
+    if args.tcp:
+        rx = TcpTelemetrySource(args.host, args.port)
+    else:
+        rx = UdpTelemetryReceiver(args.host, args.port)
     rx.start()
-    print('[udp] 监听 %s:%d, 等待首帧遥测...' % (args.host, args.port))
+    print('[%s] 等待首帧遥测...' % ('tcp' if args.tcp else 'udp'))
 
     # 等待第一帧, 最多 args.wait 秒
     t0 = time.time()
@@ -66,7 +137,8 @@ def run(args):
     if first is None:
         print('[udp] %.1fs 内未收到数据, 仍将运行(回中位), 可按 Ctrl+C 退出' % args.wait)
     else:
-        print('[udp] 收到首帧! 开始驱动 MuJoCo (Ctrl+C 退出)')
+        print('[%s] 收到首帧! 开始驱动 MuJoCo (Ctrl+C 退出)'
+              % ('tcp' if args.tcp else 'udp'))
 
     viewer = None
     if args.viewer:
@@ -159,8 +231,9 @@ def run(args):
 
 def main():
     ap = argparse.ArgumentParser(description='UDP 遥测驱动 MuJoCo 仿真')
-    ap.add_argument('--host', default='0.0.0.0', help='监听地址 (0.0.0.0=允许任意网卡)')
-    ap.add_argument('--port', type=int, default=4124, help='监听 UDP 端口 (与 DCS Lua 一致)')
+    ap.add_argument('--host', default='0.0.0.0', help='UDP 监听地址 / TCP 连接目标')
+    ap.add_argument('--port', type=int, default=4124, help='端口 (与 DCS Lua 一致)')
+    ap.add_argument('--tcp', action='store_true', help='TCP 客户端模式 (配合 adb forward)')
     ap.add_argument('--wait', type=float, default=10.0, help='等待首帧的秒数')
     ap.add_argument('--stale', type=float, default=0.5, help='超过该秒数视为断流(回中位)')
     ap.add_argument('--ctrl-hz', type=float, default=50.0)

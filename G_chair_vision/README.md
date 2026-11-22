@@ -46,8 +46,30 @@ adb push ../G_chair_sim/config.py /root/gchair_vision/config.py   # 25通道定�
 adb shell
 ```
 
-> 连上后注意两机是否同网段。若 `ping` 不通（例如电脑 10.148.x、板子 172.23.x），
-> UDP 发不到电脑。Demo 阶段可以先在板子本地自收自发验证：
+### 0.1 板子没联网？用 ADB + TCP（推荐，已实测）
+
+板子和电脑不同网段、ping 不通时，不需要 UART。ADB 只转发 TCP，所以把视觉节点
+切成 TCP server，电脑用 `adb forward` 连过去。
+
+**板子**（先起 server）:
+
+```bash
+adb shell 'python3 -u /root/gchair_vision/screen_telemetry.py \
+    --mock --transport tcp --port 4124 --duration 25 --hz 20'
+```
+
+**电脑**（另一个终端）:
+
+```bash
+adb forward tcp:4124 tcp:4124
+cd sim/G_chair_mujoco
+./.venv/bin/python sim_udp.py --tcp --host 127.0.0.1 --port 4124 --realtime
+# 结束后: adb forward --remove-all
+```
+
+实测（立创泰山派 / Ubuntu 20.04 aarch64 / Python 3.8 / cv2 4.13 / rknnlite）：
+**板子→ADB→电脑→MuJoCo 收包 241、坏包 0、丢帧 0、无超程**，平台正确跟随加减速。
+若只想本地验证板子发包，去掉 `--transport tcp` 用 UDP 自发自收：
 
 ```bash
 adb shell 'python3 /root/gchair_vision/udp_check.py 4124 9 > /tmp/check.log 2>&1 & \
@@ -55,8 +77,7 @@ adb shell 'python3 /root/gchair_vision/udp_check.py 4124 9 > /tmp/check.log 2>&1
   --mock --ip 127.0.0.1 --duration 7 --hz 20; wait; cat /tmp/check.log'
 ```
 
-实测（立创泰山派 / Ubuntu 20.04 aarch64 / Python 3.8 / cv2 4.13 / rknnlite）：
-**收包 140 帧、25 通道、加速度与角速度均为非零真实数据**。
+纯 UDP 本地实测：收包 140 帧、25 通道、加速度与角速度均为非零真实数据。
 
 ### 1. 环境
 
