@@ -34,6 +34,7 @@ from udp_telemetry import UdpTelemetryReceiver, parse_datagram
 from pose_from_motion import PoseFromMotion
 from filters import FilterChain
 from config import FILTERS
+from motion_map import accel_driven_pose, Washout6D
 
 ZERO_TELE = {}   # 空 dict → PoseFromMotion 各通道取 0 → 平台平滑回中位
 
@@ -60,6 +61,15 @@ class AccelLowPass:
             self.v[k] = v
             out[k] = v
         return out
+
+
+def pose_from_telemetry(tele, dt, mapper, filt, lp=None, wo=None, accel_model=False):
+    """统一入口：按 accel_model 选择原始 FlyPT 映射或加速度驱动映射。"""
+    if accel_model:
+        if lp is not None:
+            tele = lp.update(tele, dt)
+        return accel_driven_pose(tele, dt, wo)
+    return telemetry_to_pose(tele, dt, mapper, filt, lp)
 
 
 def telemetry_to_pose(tele, dt, mapper, filt, lp=None):
@@ -147,6 +157,11 @@ def run(args):
     lp = AccelLowPass(args.lpf) if args.lpf > 0 else None
     if lp is not None:
         print('[lpf] 遥测低通 tau=%.2fs (抑制尖峰)' % args.lpf)
+    wo = Washout6D(args.washout) if args.washout > 0 else None
+    if args.accel_model:
+        print('[motion] 加速度驱动模型 (roll<-accel_x, 左右对称)')
+    else:
+        print('[motion] 原始 FlyPT 映射 (PoseFromMotion)')
 
     if args.tcp:
         rx = TcpTelemetrySource(args.host, args.port)
@@ -191,11 +206,13 @@ def run(args):
             t = k * dt_ctrl
             item = rx.get(max_age=args.stale)
             if item is None:
-                cmd = telemetry_to_pose(ZERO_TELE, dt_ctrl, mapper, filt)
+                cmd = pose_from_telemetry(ZERO_TELE, dt_ctrl, mapper, filt,
+                                          lp, wo, args.accel_model)
                 lost += 1
             else:
                 tele, _age = item
-                cmd = telemetry_to_pose(tele, dt_ctrl, mapper, filt, lp)
+                cmd = pose_from_telemetry(tele, dt_ctrl, mapper, filt,
+                                          lp, wo, args.accel_model)
 
             disp, lim = sim.command_pose(cmd, dt_ctrl)
             sim.step()
@@ -263,8 +280,14 @@ def main():
     ap.add_argument('--host', default='0.0.0.0', help='UDP 监听地址 / TCP 连接目标')
     ap.add_argument('--port', type=int, default=4124, help='端口 (与 DCS Lua 一致)')
     ap.add_argument('--tcp', action='store_true', help='TCP 客户端模式 (配合 adb forward)')
-    ap.add_argument('--lpf', type=float, default=0.0,
-                    help='遥测加速度低通时间常数秒 (0=关闭, 推荐 0.15 抑制碰撞尖峰)')
+    ap.add_argument('--lpf', type=float, default=0.15,
+                    help='遥测加速度低通时间常数秒 (0=关闭, 默认 0.15 抑制碰撞尖峰)')
+    ap.add_argument('--washout', type=float, default=2.5,
+                    help='洗出高通时间常数秒 (0=关闭, 默认 2.5; 恒定加速度后回中位)')
+    ap.add_argument('--accel-model', action='store_true', default=True,
+                    help='加速度驱动映射 (roll<-accel_x, 左右对称; 默认开启)')
+    ap.add_argument('--no-accel-model', dest='accel_model', action='store_false',
+                    help='用原始 FlyPT PoseFromMotion 映射(可能左右不对称)')
     ap.add_argument('--wait', type=float, default=10.0, help='等待首帧的秒数')
     ap.add_argument('--stale', type=float, default=0.5, help='超过该秒数视为断流(回中位)')
     ap.add_argument('--ctrl-hz', type=float, default=50.0)
