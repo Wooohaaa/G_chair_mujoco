@@ -87,6 +87,37 @@ cd sim/G_chair_vision
     --source ../GTA5_drive_video.mp4 --csv video_telemetry.csv --duration 45
 ```
 
+## 实时性能实测（2026-11）
+
+用 `benchmark.py` 在 PC 和立创泰山派（RK3566）上实测：
+
+| 平台 | 缩放+灰度 | 光流(主耗时) | 映射打包 | **端到端/帧** | **吞吐** |
+|---|---|---|---|---|---|
+| PC (x86) | 0.15ms | ~10ms | 0.02ms | **10.3ms** | **~97 FPS** |
+| RK3566 泰山派 | 0.68ms | ~71ms | 0.14ms | **72.8ms** | **~13.7 FPS** |
+
+**结论：**
+- 光流 Farneback 占 97% 耗时，是唯一瓶颈。
+- **RK3566 上实时处理约 13~14 FPS**，即每帧约 73ms 延迟——这就是当前方案的天花板。
+- PC 上轻松 100 FPS，完全实时。
+- 传输不是瓶颈：25 个浮点约 200 字节，PC 本地环回延迟 P50 0.1ms / P95 0.5ms；
+  ADB-TCP 转发实测 241 包 0 丢包（之前验证），传输延迟 <1ms，远小于处理时间。
+
+**优化空间**（如果嫌 13 FPS 慢）：
+- 降分辨率：320×180 → 256×144，PC 上光流 9.7ms→5.9ms，板子约 41ms → **~24 FPS**。
+- 减小光流金字塔层数/迭代：`levels=2, win=11, it=1`，板子上 26ms → **~38 FPS**。
+- 这两项合用可达 ~40 FPS，但光流质量下降，需重新标定增益（见 analyze_video.py）。
+- 上 YOLO（RKNN INT8）会再增加 50~80ms/帧，使总帧率降到 8~10 FPS，
+  所以 YOLO 语义门控是按需开启，不是默认。
+
+复现：
+```bash
+python3 benchmark.py --pure --frames 300       # 纯算法吞吐
+python3 benchmark.py --mock --frames 200        # 含读帧的端到端
+python3 latency_test.py recv --port 4130 &      # 延迟测试（UDP）
+python3 latency_test.py send --mock --ip 127.0.0.1 --port 4130
+```
+
 ## 本机自测（不需要摄像头和 RKNN）
 
 ```bash
