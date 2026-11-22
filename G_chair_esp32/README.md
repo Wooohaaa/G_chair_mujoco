@@ -2,6 +2,7 @@
 
 用**一块 ESP32-S3-DevKitC-1** 替代原来的两块 Mega2560，驱动 6 路 Stewart 平台电缸。
 
+> 🔧 **最小可行方案（只用现有 ESP32 DevKit + 可调升压板 + 日鼎伺服，分步验证）**：`MINIMAL_SETUP.md`
 > 🎯 **整合总方案（原打板+两块Arduino如何合并到一块板，功能对照表）**：`INTEGRATION.md`
 > 📘 **总体说明（为什么替代、新旧对照、职责、迁移步骤）**：`REPLACING_DUAL_MEGA.md`
 > 📐 **画板规格（8 功能区块、器件、引脚）**：`BOARD_SPEC.md`
