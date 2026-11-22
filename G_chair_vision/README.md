@@ -34,6 +34,30 @@ cd ../G_chair_mujoco && ./.venv/bin/python sim_udp.py --realtime
 
 ## RK3566（泰山派）部署
 
+### 0. 通过 ADB 连接板子（立创泰山派已在板端开启 ADB）
+
+电脑端装 adb 后：
+
+```bash
+sudo apt install adb
+adb devices          # 应看到设备号，状态 device
+adb push G_chair_vision /root/gchair_vision
+adb push ../G_chair_sim/config.py /root/gchair_vision/config.py   # 25通道定义，必须
+adb shell
+```
+
+> 连上后注意两机是否同网段。若 `ping` 不通（例如电脑 10.148.x、板子 172.23.x），
+> UDP 发不到电脑。Demo 阶段可以先在板子本地自收自发验证：
+
+```bash
+adb shell 'python3 /root/gchair_vision/udp_check.py 4124 9 > /tmp/check.log 2>&1 & \
+  sleep 1; python3 -u /root/gchair_vision/screen_telemetry.py \
+  --mock --ip 127.0.0.1 --duration 7 --hz 20; wait; cat /tmp/check.log'
+```
+
+实测（立创泰山派 / Ubuntu 20.04 aarch64 / Python 3.8 / cv2 4.13 / rknnlite）：
+**收包 140 帧、25 通道、加速度与角速度均为非零真实数据**。
+
 ### 1. 环境
 
 ```bash
