@@ -57,6 +57,24 @@ cd sim/G_chair_vision
 平台随画面中的加减速/转弯做小幅倾斜与升沉（heave 约 ±6mm、roll 约 ±4°）。
 可直接逐帧对比画面里的驾驶动作与右侧平台的响应是否一致。
 
+**相机视角**：默认已是 GTA5 追尾视角——相机在座椅背侧（+Y）、斜上方俯视椅背，
+与视频里"斜上方对着车背面"一致。可用参数微调：
+
+```bash
+--cam-azimuth 90 --cam-elevation 20 --cam-distance 1.9 --cam-lookat-z 0.55
+# 旧侧下方视角: --cam-azimuth 135 --cam-elevation -15 --cam-distance 2.4
+```
+
+视频前 30s（0~30s）的对比用：
+
+```bash
+../G_chair_mujoco/.venv/bin/python video_mujoco_compare.py \
+    --video ../GTA5_drive_video.mp4 --start 0 --duration 30 \
+    --out video_compare_front.mp4
+```
+
+实测 0~30s 段位置跟踪 RMS 1.55mm / MAX 2.40mm。
+
 ### 复现命令
 
 ```bash

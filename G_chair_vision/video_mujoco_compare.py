@@ -53,6 +53,13 @@ def main():
     ap.add_argument('--out-fps', type=int, default=15, help='输出帧率 (每 N 个视频帧取1)')
     ap.add_argument('--width', type=int, default=640, help='每半边宽度')
     ap.add_argument('--height', type=int, default=360, help='每半边高度')
+    # 相机: 默认=GTA5 追尾视角（在座椅背侧 +Y、斜上方俯视椅背）
+    ap.add_argument('--cam-azimuth', type=float, default=90.0,
+                    help='相机方位角 (90=正后方对着椅背)')
+    ap.add_argument('--cam-elevation', type=float, default=20.0,
+                    help='相机仰角 (正=斜上方俯视)')
+    ap.add_argument('--cam-distance', type=float, default=1.9)
+    ap.add_argument('--cam-lookat-z', type=float, default=0.55)
     args = ap.parse_args()
 
     cap = cv2.VideoCapture(args.video)
@@ -72,10 +79,12 @@ def main():
     filt = FilterChain(FILTERS)
     renderer = mujoco.Renderer(sim.model, height=args.height, width=args.width)
     cam = mujoco.MjvCamera()
-    cam.lookat[:] = [0, 0, 0.55]
-    cam.distance = 2.4
-    cam.elevation = -15
-    cam.azimuth = 135
+    cam.lookat[:] = [0, 0, args.cam_lookat_z]
+    cam.distance = args.cam_distance
+    cam.elevation = args.cam_elevation
+    cam.azimuth = args.cam_azimuth
+    print('相机: 方位 %.0f°, 仰角 %.0f°, 距离 %.1f' %
+          (cam.azimuth, cam.elevation, cam.distance))
 
     out_frames = []
     log = {'t': [], 'cmd': [], 'act': []}
