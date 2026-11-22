@@ -50,12 +50,15 @@ except ImportError:
 
 # ============================== 可调参数 ==============================
 PROC_W, PROC_H = 320, 180        # 处理分辨率（低分辨率换帧率）
-ROI_TOP = 0.35                   # 只取画面下半部分（路面区域）
-ROI_LEFT, ROI_RIGHT = 0.15, 0.85 # 去掉左右边缘
-LP_TAU = 0.20                    # 低通时间常数 (s)，滤掉光流抖动
+ROI_TOP = 0.40                   # 只取画面下半部分（路面区域）
+ROI_LEFT, ROI_RIGHT = 0.03, 0.97 # 去掉左右边缘
+CAR_HALF = 0.13                  # 中间车的半宽比例：这段必须排除，否则车身晃动污染光流
+LP_TAU = 0.35                    # 低通时间常数 (s)，滤掉车道线经过产生的尖峰
 WASHOUT_TAU = 2.5                # 洗出时间常数 (s)，恒定速度后回中位
-SPEED_SCALE = 6.0                # 光流→速度代理 的增益（需实测标定）
-ACCEL_CLIP = 1.5                 # 加速度代理限幅 (G)
+# 用 p75 而不是 median：GTA5 沥青几乎无纹理，median 被 0 主导（实测中位 0.003，
+# p75 约 0.5~1.0）。p75 只取有纹理像素（车道线/路缘）的运动，才反映车速。
+SPEED_SCALE = 1.0                # p75光流 → 速度代理 增益（在真实视频上标定）
+ACCEL_CLIP = 0.8                 # 加速度代理限幅 (G)
 ROT_CLIP = math.radians(8.0)     # 角速度限幅 (rad/s)
 
 
@@ -102,6 +105,21 @@ class VisionMotion:
         self.prev_gray = None
         self.prev_t = None
         self.prev_speed = None
+        # p75 光流有尖峰（车道线经过）。必须先平滑速度再差分，
+        # 否则差分会把尖峰放大到限幅值，平台会剧烈抖动。
+        self.speed_lp = EMA(2.0)   # 加大平滑：抹掉车道线经过的节奏，只留真实快慢变化
+        self.lat_lp = EMA(0.4)
+        self.accel_z_pre = EMA(0.4)   # 限幅前再平滑一次，避免尖峰顶到限幅
+        self.accel_x_pre = EMA(0.4)
+        self.prev_speed_smooth = None
+        # ROI mask: 画面下方 + 排除中间的车 + 去掉最边缘
+        h, w = PROC_H, PROC_W
+        self.mask = np.zeros((h, w), dtype=bool)
+        self.mask[int(h * ROI_TOP):, :] = True
+        cx = w // 2
+        self.mask[int(h * ROI_TOP):, cx - int(w * CAR_HALF):cx + int(w * CAR_HALF)] = False
+        self.mask[:, :int(w * 0.03)] = False
+        self.mask[:, int(w * 0.97):] = False
         # 每个自由度: 低通 + 洗出
         self.filters = {
             k: (EMA(LP_TAU), Washout(WASHOUT_TAU))
@@ -113,29 +131,24 @@ class VisionMotion:
         self.frame_idx = 0
         self.last_raw = {}
 
-    def _flow_features(self, frame, gray):
-        """返回 (纵向速度代理, 横向速度代理, 颠簸强度, 有效标志)"""
-        h, w = gray.shape
-        y0 = int(h * ROI_TOP)
-        x0, x1 = int(w * ROI_LEFT), int(w * ROI_RIGHT)
-        roi = gray[y0:, x0:x1]
-
+    def _flow_features(self, gray):
+        """返回 (纵向速度代理, 横向速度代理, 颠簸强度, 有效标志)。"""
         if self.prev_gray is None:
-            self.prev_gray = roi.copy()
+            self.prev_gray = gray.copy()
             return 0.0, 0.0, 0.0, False
 
-        # Farneback 稠密光流：路面纹理的运动
+        # Farneback 稠密光流
         flow = cv2.calcOpticalFlowFarneback(
-            self.prev_gray, roi, None, 0.5, 3, 15, 3, 5, 1.2, 0)
-        self.prev_gray = roi.copy()
+            self.prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+        self.prev_gray = gray.copy()
 
-        fy = flow[:, :, 1]      # 向下为正 → 前进
-        fx = flow[:, :, 0]      # 向右为正 → 横向
-        # 用中位数抗异常值（其它车的局部运动、压缩噪点）
-        v_long = float(np.median(fy))
-        v_lat = float(np.median(fx))
-        # 垂直方向的离散度 → 颠簸/纹理错乱强度
-        bump = float(np.std(fy))
+        fy = flow[:, :, 1][self.mask]   # 向下为正 → 前进
+        fx = flow[:, :, 0][self.mask]   # 向右为正 → 横向
+        mag = np.sqrt(flow[:, :, 0] ** 2 + flow[:, :, 1] ** 2)[self.mask]
+        # 用 p75：只取有纹理像素的运动，避开无纹理沥青的 0 值
+        v_long = float(np.percentile(fy, 75))
+        v_lat = float(np.mean(fx))
+        bump = float(np.percentile(mag, 75))
         return v_long, v_lat, bump, True
 
     def process(self, frame, t):
@@ -146,23 +159,27 @@ class VisionMotion:
         dt = 0.033 if self.prev_t is None else max(0.005, min(0.2, t - self.prev_t))
         self.prev_t = t
 
-        v_long, v_lat, bump, valid = self._flow_features(proc, gray)
+        v_long, v_lat, bump, valid = self._flow_features(gray)
 
-        # 光流 → 速度代理 → 差分 → 加速度代理
+        # 光流 → 速度代理 →【先平滑】→ 差分 → 加速度代理
         speed = v_long * SPEED_SCALE if valid else 0.0
-        if self.prev_speed is None or not valid:
+        speed_s = self.speed_lp.update(speed, dt)
+        lat_s = self.lat_lp.update(v_lat, dt)
+        if self.prev_speed_smooth is None or not valid:
             accel_long = 0.0
         else:
-            accel_long = (speed - self.prev_speed) / dt
-        self.prev_speed = speed
+            accel_long = (speed_s - self.prev_speed_smooth) / dt
+        self.prev_speed_smooth = speed_s
 
         raw = {
-            'accel_z': np.clip(accel_long, -ACCEL_CLIP, ACCEL_CLIP),   # 纵向 surge
-            'accel_x': np.clip(v_lat * SPEED_SCALE * 2.0, -ACCEL_CLIP, ACCEL_CLIP),  # 横向 sway
-            'accel_y': np.clip((bump - 1.0) * 0.25, -ACCEL_CLIP, ACCEL_CLIP),        # heave
-            'rot_y':   np.clip(v_lat * 0.15, -ROT_CLIP, ROT_CLIP),    # yaw
-            'rot_x':   np.clip(-v_lat * 0.10, -ROT_CLIP, ROT_CLIP),   # roll
-            'rot_z':   np.clip((bump - 1.0) * 0.02, -ROT_CLIP, ROT_CLIP),  # pitch
+            'accel_z': np.clip(self.accel_z_pre.update(accel_long, dt),
+                               -ACCEL_CLIP, ACCEL_CLIP),              # 纵向 surge
+            'accel_x': np.clip(self.accel_x_pre.update(lat_s * 0.8, dt),
+                               -ACCEL_CLIP, ACCEL_CLIP),              # sway
+            'accel_y': np.clip((bump - 2.0) * 0.08, -ACCEL_CLIP, ACCEL_CLIP),  # heave
+            'rot_y':   np.clip(lat_s * 0.08, -ROT_CLIP, ROT_CLIP),    # yaw
+            'rot_x':   np.clip(-lat_s * 0.05, -ROT_CLIP, ROT_CLIP),   # roll
+            'rot_z':   np.clip((bump - 2.0) * 0.01, -ROT_CLIP, ROT_CLIP),  # pitch
         }
 
         # YOLO 语义：菜单/过场时抑制，前方车逼近时加冲击
@@ -182,7 +199,7 @@ class VisionMotion:
         self.frame_idx += 1
         if self.debug_dir and self.frame_idx % 10 == 0:
             cv2.imwrite(os.path.join(self.debug_dir, 'f%05d.jpg' % self.frame_idx), proc)
-        return out, raw, speed, valid
+        return out, raw, speed_s, valid
 
 
 class YoloGate:
@@ -331,10 +348,13 @@ def main():
     ap.add_argument('--debug-dir', default=None, help='保存调试帧目录')
     ap.add_argument('--duration', type=float, default=0.0, help='0=一直运行')
     ap.add_argument('--hz', type=float, default=20.0, help='发送频率 (RK3566 建议 15~20)')
+    ap.add_argument('--csv', default=None, help='保存发出的遥测到 CSV（分析用）')
     args = ap.parse_args()
 
     cap = None
     mock = None
+    video_fps = None
+    video_frames = 0
     if args.mock:
         mock = MockCapture()
         print('[capture] 合成路面模式')
@@ -343,19 +363,31 @@ def main():
         if not cap.isOpened():
             print('[capture] 无法打开 %s' % args.source)
             return
-        print('[capture] %s' % args.source)
+        # 视频文件: 用视频时间戳而不是墙钟，否则差分加速度会爆炸
+        if os.path.isfile(args.source):
+            video_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        print('[capture] %s%s' % (args.source,
+              (' (视频 %.1ffps)' % video_fps if video_fps else ' (实时)') ))
 
     motion = VisionMotion(use_yolo=args.yolo, model_path=args.model,
                           debug_dir=args.debug_dir)
     sender = TelemetrySender(args.transport, args.ip, args.port)
     print('[send] @ %.0fHz' % args.hz)
 
+    csv_fh = open(args.csv, 'w') if args.csv else None
+    if csv_fh:
+        csv_fh.write('t,' + ','.join(TELEMETRY_CHANNELS) + '\n')
+
     t0 = time.time()
     frames = 0
     try:
         while (args.duration <= 0) or (time.time() - t0 < args.duration):
             loop0 = time.time()
-            t = time.time() - t0
+            if video_fps:
+                t = video_frames / video_fps
+                video_frames += 1
+            else:
+                t = time.time() - t0
             if mock:
                 ok, frame = mock.read()
             else:
@@ -368,18 +400,23 @@ def main():
             tele = build_telemetry(m, speed, 0.0, valid, t)
             payload = ' '.join('%.4f' % tele[k] for k in TELEMETRY_CHANNELS)
             sender.send(payload)
+            if csv_fh:
+                csv_fh.write('%.4f,%s\n' % (t, payload.replace(' ', ',')))
             frames += 1
             if frames % 20 == 0:
                 print(' t=%.1fs 速度代理=%.2f  accel=%s  滤波后=%s' %
                       (t, speed, np.round([raw[k] for k in ('accel_z', 'accel_x')], 2),
                        np.round([m['accel_z'], m['accel_x']], 3)), flush=True)
-            time.sleep(max(0, 1.0 / args.hz - (time.time() - loop0)))
+            if not video_fps:   # 视频文件全速处理，不做实时节流
+                time.sleep(max(0, 1.0 / args.hz - (time.time() - loop0)))
     except KeyboardInterrupt:
         print('\n停止')
     finally:
         sender.close()
         if cap:
             cap.release()
+        if csv_fh:
+            csv_fh.close()
     print('共发送 %d 帧' % frames)
 
 

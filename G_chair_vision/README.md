@@ -20,6 +20,38 @@
 **结论**：这是给"没有遥测接口的游戏"用的降级方案。GTA5 能用 SHVDN 遥测就优先用遥测，
 视觉方案作为备用/补充。
 
+## 用真实 GTA5 录像标定的发现（重要）
+
+工程根目录的 `GTA5_drive_video.mp4`（1280×720 / 30fps / 13分49秒，第三人称追尾视角、
+无 HUD）用来做了标定，`analyze_video.py` 输出 `video_flow.png` / `video_flow.csv`，
+主程序输出 `video_demo_result.png` / `video_telemetry.csv`。
+
+**三个必须修正的问题**：
+
+1. **ROI 不能包含中间的车。** 车身随悬挂晃动会污染光流。已改成 `sides` ROI：
+   画面下方 + 排除中间 13% 宽度。实测 p75 纵向光流从 0.537（含车）提升到 0.968。
+2. **不能用 median。** GTA5 沥青几乎无纹理，光流中位数被 0 主导（实测 0.003），
+   只有车道线/路缘等有纹理像素有有效运动（75 分位 0.5~1.0）。改用 **p75**。
+3. **必须先平滑速度再差分。** 直接对 p75 速度差分会把车道线经过的节奏放大成
+   3~4 秒周期的伪加速度振荡。现在 `speed_lp` 用 2.0s 时间常数，再差分、再限幅。
+
+**诚实结论**：即使修正后，画面推导的加速度仍比游戏遥测噪声大得多
+（`video_demo_result.png` 可见 surge 在 ±0.2~0.8G 波动）。这是信息源上限，不是 bug。
+整条链路实测可用：真实视频→UDP→MuJoCo 收包 1328 / 坏包 0 / 无超程，
+缸位移最大 58mm；但位置跟踪 RMS 约 5mm（遥测方案约 1.5mm）。
+
+### 复现命令
+
+```bash
+cd sim/G_chair_vision
+# ROI 对比分析（约 2~3 分钟）
+../G_chair_mujoco/.venv/bin/python analyze_video.py \
+    --video ../GTA5_drive_video.mp4 --start 25 --duration 90 --step 3
+# 主程序跑视频并导出遥测
+../G_chair_mujoco/.venv/bin/python screen_telemetry.py \
+    --source ../GTA5_drive_video.mp4 --csv video_telemetry.csv --duration 45
+```
+
 ## 本机自测（不需要摄像头和 RKNN）
 
 ```bash

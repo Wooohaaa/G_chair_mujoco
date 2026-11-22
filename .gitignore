@@ -11,6 +11,9 @@ venv/
 .idea/
 *.swp
 
+# 大体积视频素材（本地分析用，不入库）
+GTA5_drive_video.mp4
+
 # 不属于本次开源范围的其他子项目
 G_chair_esp32/
 GchairUnity/
