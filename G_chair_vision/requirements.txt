@@ -1,0 +1,6 @@
+# 本机自测（PC）
+opencv-python-headless>=4.8
+numpy>=1.24
+
+# RK3566 实机另有系统包: python3-opencv python3-numpy
+# YOLO 门控可选: rknn-toolkit-lite2 + yolov8n.rknn (INT8)
