@@ -70,7 +70,14 @@
 游戏PC --UDP 25浮点--> 仿真PC --serial_bridge.py--> COM1(1号板) + COM2(2号板)
 ```
 
-我写好了桥接程序 `serial_bridge.py`，它复用 `G_chair_sim` 的遥测→姿态→滤波→IK→行程映射，输出的帧和 FlyPT/Mover 逐字节一致（已验证：帧长 10 字节、`ff ff` 开头、16-bit 解码回 ±95mm 正确）。
+桥接程序 `serial_bridge.py` 现在调用**仿真与实机共用的 `motion_pipeline.py`**：默认用修好的加速度驱动映射（roll←accel_x，左右对称，和 MuJoCo 仿真完全一致），可用 `--flypt` 切回原始 FlyPT 链路对比。输出帧和 FlyPT/Mover 逐字节一致（已验证：帧长 10 字节、`ff ff` 开头、16-bit 解码回 ±95mm 正确）。
+
+```bash
+# 默认 (推荐): 与仿真同一套对称映射
+./.venv/bin/python serial_bridge.py --single-board --port1 /dev/ttyUSB0 --verbose
+# 切回原始 FlyPT 映射对比
+./.venv/bin/python serial_bridge.py --single-board --flypt --port1 /dev/ttyUSB0
+```
 
 ```bash
 # 1) 装依赖

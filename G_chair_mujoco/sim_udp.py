@@ -31,56 +31,11 @@ sys.path.insert(0, SIM_DIR)
 from sim import GChairSim, OUTPUT, plot_log
 
 from udp_telemetry import UdpTelemetryReceiver, parse_datagram
-from pose_from_motion import PoseFromMotion
-from filters import FilterChain
-from config import FILTERS
-from motion_map import accel_driven_pose, Washout6D
+# 仿真与实机共用同一套映射管线（保证仿真所见=实机所得）
+sys.path.insert(0, os.path.join(HERE, '..'))
+from motion_pipeline import MotionPipeline
 
-ZERO_TELE = {}   # 空 dict → PoseFromMotion 各通道取 0 → 平台平滑回中位
-
-
-class AccelLowPass:
-    """对加速度/角速度遥测先做一阶低通，压掉 GTA5 碰撞尖峰。
-
-    只滤波遥测输入 (G / rad/s)，不改 Mapper/FilterChain，所以 FlyPT 链路语义不变。
-    tau 越大越平滑但延迟越高；0.15s 是之前诊断实测的折中值。
-    """
-    def __init__(self, tau):
-        self.tau = tau
-        self.v = {}
-
-    def update(self, tele, dt):
-        if self.tau <= 0:
-            return tele
-        a = dt / (self.tau + dt)
-        out = dict(tele)
-        for k in ('accel_x', 'accel_z', 'accel_y', 'rot_x', 'rot_y', 'rot_z'):
-            x = float(tele.get(k, 0.0))
-            prev = self.v.get(k, x)
-            v = (1 - a) * prev + a * x
-            self.v[k] = v
-            out[k] = v
-        return out
-
-
-def pose_from_telemetry(tele, dt, mapper, filt, lp=None, wo=None, accel_model=False):
-    """统一入口：按 accel_model 选择原始 FlyPT 映射或加速度驱动映射。"""
-    if accel_model:
-        if lp is not None:
-            tele = lp.update(tele, dt)
-        return accel_driven_pose(tele, dt, wo)
-    return telemetry_to_pose(tele, dt, mapper, filt, lp)
-
-
-def telemetry_to_pose(tele, dt, mapper, filt, lp=None):
-    """遥测 dict → [x,y,z,roll,pitch,yaw] (m, rad), 复用 G_chair_sim 的映射/滤波。"""
-    if lp is not None:
-        tele = lp.update(tele, dt)
-    pf = mapper.apply_filters(mapper.compute(tele, dt), filt, dt)
-    return np.array([
-        pf['sway'] / 1000.0, pf['surge'] / 1000.0, pf['heave'] / 1000.0,
-        math.radians(pf['roll']), math.radians(pf['pitch']), math.radians(pf['yaw']),
-    ])
+ZERO_TELE = {}   # 空 dict → 各通道取 0 → 平台平滑回中位
 
 
 class TcpTelemetrySource:
@@ -152,16 +107,12 @@ class TcpTelemetrySource:
 def run(args):
     dt_ctrl = 1.0 / args.ctrl_hz
     sim = GChairSim()
-    mapper = PoseFromMotion()
-    filt = FilterChain(FILTERS)
-    lp = AccelLowPass(args.lpf) if args.lpf > 0 else None
-    if lp is not None:
-        print('[lpf] 遥测低通 tau=%.2fs (抑制尖峰)' % args.lpf)
-    wo = Washout6D(args.washout) if args.washout > 0 else None
-    if args.accel_model:
-        print('[motion] 加速度驱动模型 (roll<-accel_x, 左右对称)')
-    else:
-        print('[motion] 原始 FlyPT 映射 (PoseFromMotion)')
+    # 与实机桥接共用同一套映射管线；仿真只用其 .pose()，IK 交给 MuJoCo
+    motion = MotionPipeline(accel_model=args.accel_model,
+                            lpf_tau=args.lpf, washout_tau=args.washout)
+    print('[motion] %s (共用 motion_pipeline), lpf=%.2f, washout=%.2f' %
+          ('加速度驱动(对称)' if args.accel_model else '原始FlyPT',
+           args.lpf, args.washout))
 
     if args.tcp:
         rx = TcpTelemetrySource(args.host, args.port)
@@ -206,13 +157,11 @@ def run(args):
             t = k * dt_ctrl
             item = rx.get(max_age=args.stale)
             if item is None:
-                cmd = pose_from_telemetry(ZERO_TELE, dt_ctrl, mapper, filt,
-                                          lp, wo, args.accel_model)
+                cmd = motion.pose(ZERO_TELE, dt_ctrl)  # 回中位
                 lost += 1
             else:
                 tele, _age = item
-                cmd = pose_from_telemetry(tele, dt_ctrl, mapper, filt,
-                                          lp, wo, args.accel_model)
+                cmd = motion.pose(tele, dt_ctrl)
 
             disp, lim = sim.command_pose(cmd, dt_ctrl)
             sim.step()

@@ -17,6 +17,14 @@ FlyPT / 游戏遥测 ──> 6DOF 位姿 ──> 滤波 ──> 逆运动学 IK 
 | `G_chair_sim/` | 上游数据链：遥测生成 → 姿态映射 → FlyPT 滤波 → IK → 控制器/串口仿真 |
 | `G_chair_gta5/` | GTA5 游戏机端 UDP 遥测发送脚本（ScriptHookV + SHVDN） |
 | `G_chair_esp32/` | ESP32-S3 单板控制器固件（6 路 RMT 步进，替代双 Mega2560） |
+| `motion_pipeline.py` | **仿真与实机共用的映射管线**：遥测→低通→加速度驱动映射→洗出→6DOF→IK→缸位移 |
+
+### 仿真 = 实机：共用一套映射
+
+`motion_pipeline.py` 是上位机核心算法的唯一权威实现，`sim_udp.py`（仿真/MuJoCo）和
+`G_chair_hw/serial_bridge.py`（实机/串口）都调用它，**保证仿真所见 = 实机所得**。
+默认用修好的"加速度驱动映射"（roll←accel_x，左右对称），可用 `--flypt`/`--no-accel-model`
+切回原始 FlyPT 映射对比。主控（Arduino/ESP32）是纯执行层，不参与映射，无需改动。
 
 ## 快速开始
 

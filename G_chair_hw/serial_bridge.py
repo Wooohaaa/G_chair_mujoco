@@ -31,12 +31,13 @@ import time
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SIM_DIR = os.path.join(HERE, '..', 'G_chair_sim')
-sys.path.insert(0, SIM_DIR)
+SIM_ROOT = os.path.join(HERE, '..')
+sys.path.insert(0, SIM_ROOT)
+sys.path.insert(0, os.path.join(SIM_ROOT, 'G_chair_sim'))
 
 from config import TELEMETRY_CHANNELS, SIM
-from pipeline import SimulationPipeline
 from udp_telemetry import UdpTelemetryReceiver
+from motion_pipeline import MotionPipeline
 
 START = bytes([255, 255])
 DT = SIM['dt']            # 0.02s = 50Hz, 与原链路一致
@@ -94,13 +95,12 @@ def run(args):
     rx.start()
     print('[udp] 监听 %s:%d' % (args.host, args.port))
 
-    pipe = SimulationPipeline()
-
-    # 把 pipeline 的遥测源换成 UDP 接收器
-    def udp_generate():
-        item = rx.get(max_age=args.stale)
-        return item[0] if item is not None else zero_telemetry()
-    pipe.telemetry_gen.generate = udp_generate
+    # 仿真/实机共用的映射管线（默认加速度驱动映射，--flypt 切回原链路）
+    motion = MotionPipeline(accel_model=not args.flypt,
+                            lpf_tau=args.lpf, washout_tau=args.washout)
+    print('[motion] %s, lpf=%.2f, washout=%.2f' %
+          ('加速度驱动(对称)' if not args.flypt else '原FlyPT映射',
+           args.lpf, args.washout))
 
     ser1 = ser2 = None
     if not args.dry_run:
@@ -115,11 +115,13 @@ def run(args):
     lost = 0
     try:
         while (args.duration <= 0) or (time.time() - t0 < args.duration):
-            if rx.get(max_age=args.stale) is None:
+            item = rx.get(max_age=args.stale)
+            if item is None:
                 lost += 1
-            pipe.run_step()
-            disp = np.asarray(pipe.history['displacements'][-1], dtype=float)
-            # 再限幅一次, 保护行程
+                disp = motion.displacements_mm(zero_telemetry(), DT)  # 回中位
+            else:
+                disp = motion.displacements_mm(item[0], DT)
+            disp = np.asarray(disp, dtype=float)
             disp = np.clip(disp, -95.0, 95.0)
 
             if args.single_board:
@@ -159,6 +161,10 @@ def main():
     ap.add_argument('--dry-run', action='store_true', help='不写串口, 只验证链路')
     ap.add_argument('--verbose', action='store_true')
     ap.add_argument('--duration', type=float, default=0.0, help='运行秒数, 0=一直运行')
+    ap.add_argument('--flypt', action='store_true',
+                    help='用原始 FlyPT 映射(默认用修好的加速度驱动映射)')
+    ap.add_argument('--lpf', type=float, default=0.15, help='遥测低通 tau 秒 (0=关)')
+    ap.add_argument('--washout', type=float, default=2.5, help='洗出高通 tau 秒 (0=关)')
     args = ap.parse_args()
     run(args)
 
