@@ -40,6 +40,23 @@
 整条链路实测可用：真实视频→UDP→MuJoCo 收包 1328 / 坏包 0 / 无超程，
 缸位移最大 58mm；但位置跟踪 RMS 约 5mm（遥测方案约 1.5mm）。
 
+### 与视频同步的并排对比（看准确度/运动效果）
+
+`video_mujoco_compare.py` 取视频中间 30s，左边 GTA5 原画面、右边 MuJoCo 平台，
+用与实机完全相同的数据链驱动，输出 mp4 + 跟踪曲线：
+
+```bash
+cd sim/G_chair_vision
+../G_chair_mujoco/.venv/bin/python video_mujoco_compare.py \
+    --video ../GTA5_drive_video.mp4 --start 400 --duration 30 \
+    --out video_compare.mp4
+# 产物: video_compare.mp4（本地看）, compare_plot.png, compare_log.csv
+```
+
+实测 400~430s 段：**位置跟踪 RMS 1.46mm / MAX 2.02mm，姿态 RMS 0.07° / MAX 0.30°**，
+平台随画面中的加减速/转弯做小幅倾斜与升沉（heave 约 ±6mm、roll 约 ±4°）。
+可直接逐帧对比画面里的驾驶动作与右侧平台的响应是否一致。
+
 ### 复现命令
 
 ```bash
