@@ -80,6 +80,9 @@ cd sim/G_chair_hw
 
 板子必须接**两个独立串口**、115200/8N1、共地。断流 >0.5s 自动回中位。
 
+若换成 **ESP32-S3 单板**（替代双 Mega），用 `--single-board` 模式发单帧 6 轴：
+`serial_bridge.py --single-board --port1 /dev/ttyUSB0`。详见 `G_chair_esp32/README.md`。
+
 ## 六、常见问题
 
 | 现象 | 原因 / 解决 |
