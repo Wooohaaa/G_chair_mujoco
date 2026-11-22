@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>G_chair 主控调试面板</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", sans-serif; margin: 16px; background:#12151a; color:#e8eaed; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; }
+  .card { background:#1c2028; border:1px solid #2d323c; border-radius:10px; padding:14px; }
+  .card h2 { font-size:14px; margin:0 0 10px; color:#9aa0aa; }
+  button { background:#2a6df0; color:#fff; border:0; border-radius:6px; padding:7px 12px;
+           margin:2px; cursor:pointer; font-size:13px; }
+  button:hover { background:#3d7ff5; }
+  button.warn { background:#c0392b; }
+  button.warn:hover { background:#d0453b; }
+  button.ghost { background:#374151; }
+  .grid { display:grid; grid-template-columns: repeat(3,1fr); gap:6px; }
+  input[type=number] { width:64px; background:#0f1115; border:1px solid #374151;
+    color:#e8eaed; border-radius:4px; padding:4px; }
+  #status { font-family: monospace; font-size:12px; line-height:1.7; }
+  .kv { display:inline-block; min-width:92px; }
+  .ok { color:#4ade80; } .bad { color:#f87171; } .warnc { color:#fbbf24; }
+  canvas { background:#0f1115; border-radius:6px; }
+  .legend { font-size:11px; color:#9aa0aa; margin-top:4px; }
+  .conn { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+  select,input[type=text] { background:#0f1115; border:1px solid #374151; color:#e8eaed;
+    border-radius:4px; padding:5px; }
+  .dot { width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px; }
+</style>
+</head>
+<body>
+<h1>🎛️ G_chair ESP32-S3 主控调试面板</h1>
+
+<div class="conn card">
+  <span id="connDot" class="dot" style="background:#f87171"></span>
+  <span id="connText">未连接</span>
+  <select id="portSel"></select>
+  <button onclick="connect()">连接串口</button>
+  <button class="ghost" onclick="disconnect()">断开</button>
+  <button class="ghost" onclick="simulate()">模拟模式</button>
+  <span id="err" class="bad"></span>
+</div>
+
+<div class="row">
+  <div class="card" style="flex:1;min-width:260px">
+    <h2>实时状态 (20Hz)</h2>
+    <div id="status"></div>
+  </div>
+  <div class="card" style="flex:2;min-width:420px">
+    <h2>6 缸位移曲线 (mm) — 实际(实线) / 目标(虚线)</h2>
+    <canvas id="chart" width="640" height="220"></canvas>
+    <div class="legend" id="speedInfo"></div>
+  </div>
+</div>
+
+<div class="row" style="margin-top:14px">
+  <div class="card">
+    <h2>预设动作（点即执行）</h2>
+    <div class="grid">
+      <button onclick="preset('neutral')">中位</button>
+      <button onclick="preset('heave_up')">升沉+</button>
+      <button onclick="preset('heave_dn')">升沉−</button>
+      <button onclick="preset('roll_l')">左倾</button>
+      <button onclick="preset('roll_r')">右倾</button>
+      <button onclick="preset('pitch_up')">抬头</button>
+      <button onclick="preset('pitch_dn')">低头</button>
+      <button onclick="preset('yaw_l')">左转</button>
+      <button onclick="preset('yaw_r')">右转</button>
+    </div>
+    <button class="warn" style="margin-top:10px;width:100%" onclick="estop()">⛔ 软件急停（回中位）</button>
+    <div class="legend">硬件急停仍是物理按钮，直接切断 24V</div>
+  </div>
+
+  <div class="card">
+    <h2>自定义 6 缸位移 (mm，行程 ±95)</h2>
+    <div id="sliders"></div>
+    <button onclick="sendCustom()">发送自定义位姿</button>
+    <button class="ghost" onclick="zeroInputs()">清零输入</button>
+  </div>
+
+  <div class="card">
+    <h2>录制 / 日志</h2>
+    <button onclick="recStart()">● 开始录制</button>
+    <button onclick="recStop()">■ 停止并保存</button>
+    <div class="legend">保存到 output/debug_panel_log.csv<br>含每帧 6 缸实际/目标、限位、使能、看门狗</div>
+  </div>
+</div>
+
+<script>
+const WS = 'ws://' + location.hostname + ':8766';
+let ws = null;
+let hist = {cur:[[],[],[],[],[],[]], tgt:[[],[],[],[],[],[]]};
+const COLORS = ['#f87171','#fbbf24','#4ade80','#38bdf8','#a78bfa','#f472b6'];
+
+// 初始化滑块
+const sliders = document.getElementById('sliders');
+for (let i=0;i<6;i++){
+  const d = document.createElement('div');
+  d.innerHTML = `缸${i}: <input type="number" id="ax${i}" value="0" min="-95" max="95" step="1"> mm`;
+  sliders.appendChild(d);
+}
+
+async function loadPorts(){
+  try {
+    const r = await fetch('/ports');
+    const j = await r.json();
+    const sel = document.getElementById('portSel');
+    sel.innerHTML = j.ports.map(p=>`<option value="${p}">${p}</option>`).join('') ||
+                    '<option value="">无串口设备</option>';
+  } catch(e){}
+}
+loadPorts();
+
+function wsConnect(){
+  ws = new WebSocket(WS);
+  ws.onmessage = e => {
+    const s = JSON.parse(e.data);
+    updateStatus(s);
+  };
+  ws.onclose = () => setTimeout(wsConnect, 1000);
+}
+wsConnect();
+
+function cmd(c, extra){
+  if (ws && ws.readyState===1) ws.send(JSON.stringify(Object.assign({cmd:c}, extra||{})));
+}
+
+function connect(){
+  const p = document.getElementById('portSel').value;
+  if(!p){ document.getElementById('err').textContent='请先选择串口'; return; }
+  cmd('connect',{port:p, baud:115200});
+  document.getElementById('err').textContent='';
+}
+function disconnect(){ cmd('disconnect'); }
+function simulate(){ cmd('connect',{port:'__SIM__'}); }
+function preset(name){ cmd('preset',{name}); }
+function estop(){ cmd('estop'); }
+function recStart(){ cmd('record_start'); }
+function recStop(){ cmd('record_stop'); }
+function sendCustom(){
+  const disp=[];
+  for(let i=0;i<6;i++) disp.push(parseFloat(document.getElementById('ax'+i).value)||0);
+  cmd('pose',{disp});
+}
+function zeroInputs(){ for(let i=0;i<6;i++) document.getElementById('ax'+i).value=0; }
+
+function updateStatus(s){
+  const dot=document.getElementById('connDot');
+  if(s.connected){ dot.style.background='#4ade80'; document.getElementById('connText').textContent='已连接 ('+s.mode+')'; }
+  else { dot.style.background='#f87171'; document.getElementById('connText').textContent='未连接'; }
+  if(s.error) document.getElementById('err').textContent=s.error;
+
+  const lim = s.limit||0;
+  let html = `<div><span class="kv">使能</span><span class="${s.enabled?'ok':'warnc'}">${s.enabled?'ON':'OFF'}</span></div>`;
+  html += `<div><span class="kv">看门狗</span><span class="${s.watchdog?'bad':'ok'}">${s.watchdog?'回中位中':'正常'}</span></div>`;
+  html += `<div><span class="kv">限位</span>${[0,1,2,3,4,5].map(i=>
+      `<span class="${(lim>>i)&1?'bad':''}">${i}:${(lim>>i)&1?'触':'·'} </span>`).join('')}</div>`;
+  html += `<div style="margin-top:6px"><b>缸  实际mm / 目标mm / 速度mm/s</b></div>`;
+  for(let i=0;i<6;i++){
+    const sp = (s.speed&&s.speed[i])||0;
+    const spc = sp>128?'bad':'';
+    html += `<div><span class="kv">缸${i}</span>${s.cur_mm[i].toFixed(1)} / ${s.tgt_mm[i].toFixed(1)} / <span class="${spc}">${sp.toFixed(0)}</span></div>`;
+  }
+  document.getElementById('status').innerHTML = html;
+
+  // 曲线
+  for(let i=0;i<6;i++){
+    hist.cur[i].push(s.cur_mm[i]); hist.tgt[i].push(s.tgt_mm[i]);
+    if(hist.cur[i].length>240){ hist.cur[i].shift(); hist.tgt[i].shift(); }
+  }
+  draw();
+  const maxSp = Math.max(...(s.speed||[0]));
+  document.getElementById('speedInfo').innerHTML =
+    `最大缸速: <span class="${maxSp>128?'bad':'ok'}">${maxSp.toFixed(0)} mm/s</span> ` +
+    `(主控上限 128)`;
+}
+
+function draw(){
+  const c=document.getElementById('chart'), x=c.getContext('2d');
+  const W=c.width,H=c.height;
+  x.clearRect(0,0,W,H);
+  // 网格 + 零线
+  x.strokeStyle='#2d323c'; x.lineWidth=1;
+  for(let v=-100;v<=100;v+=50){
+    const y=H/2 - v/100*(H/2-10);
+    x.beginPath(); x.moveTo(0,y); x.lineTo(W,y); x.stroke();
+  }
+  x.strokeStyle='#556'; x.beginPath(); x.moveTo(0,H/2);x.lineTo(W,H/2);x.stroke();
+  const n=hist.cur[0].length;
+  for(let i=0;i<6;i++){
+    x.strokeStyle=COLORS[i]; x.lineWidth=1.6;
+    // 实际(实线)
+    x.beginPath();
+    for(let k=0;k<n;k++){
+      const px=k/(239)*W, py=H/2 - hist.cur[i][k]/100*(H/2-10);
+      k?x.lineTo(px,py):x.moveTo(px,py);
+    }
+    x.stroke();
+    // 目标(虚线)
+    x.setLineDash([4,3]); x.globalAlpha=0.5; x.beginPath();
+    for(let k=0;k<n;k++){
+      const px=k/(239)*W, py=H/2 - hist.tgt[i][k]/100*(H/2-10);
+      k?x.lineTo(px,py):x.moveTo(px,py);
+    }
+    x.stroke(); x.setLineDash([]); x.globalAlpha=1;
+  }
+}
+</script>
+</body>
+</html>

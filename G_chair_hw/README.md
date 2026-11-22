@@ -1,5 +1,8 @@
 # G_chair 实机通信：两块 Arduino、职责、游戏机接入、单板替代
 
+> 🎛️ **调试测试面板**：`DEBUG_PANEL.md` —— 连接真实 ESP32-S3 主控的浏览器界面，
+> 手动姿态测试、实时状态/曲线、数据录制，替代 FlyPT Mover 的调试功能。
+
 本文所有结论来自工程内实际文件：
 
 - 固件：`斯图尔特6轴平台/第二步-控制器/19厘米行程代码/servoController/servoController.ino`
