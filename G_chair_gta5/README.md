@@ -12,13 +12,29 @@ GTA5 没有官方遥测接口，必须靠 mod 从游戏内读取车辆状态。�
 
 > ⚠️ ScriptHookV **不支持 GTA Online**（进入线上会被关闭游戏）。必须在**故事模式**下用。
 
+### 选 Legacy 还是 Enhanced？（Steam 2026-11 现状）
+
+Steam 现在买 GTA V 会**同时给两个版本**：`Grand Theft Auto V Legacy`（普通版）和 `Grand Theft Auto V Enhanced`（增强版），是两个独立安装。
+
+| | Legacy（普通版）✅ 推荐 | Enhanced（增强版） |
+|---|---|---|
+| ScriptHookV | v3889.0（build 1.0.3889.0） | v1158.13（build 1.0.1158.13） |
+| C# 加载器 | 原版 Community SHVDN nightly | **必须**用 SHVDNE (ScriptHookVDotNetEnhanced) v1.1.0.6 |
+| 最低配置 | Q6600 / 4GB / 9800GT / 125GB | i7-4770 / 8GB / GTX1630 4GB / SSD 105GB |
+| mod 生态 | 最成熟，资料最多 | OpenIV/OpenRPF、资产类 mod 兼容性差 |
+
+**本脚本推荐用 Legacy**：我们只用到 SHVDN 的标准 API（`Velocity`/`Quaternion`/`RightVector` 等），不碰内存指针，Legacy 上工具链最稳、排错资料最多。若你已在 Enhanced 上玩，也能用——但必须把 SHVDN 换成 **SHVDNE v1.1.0.6**（原版 SHVDN 在 Enhanced 上不工作），本脚本无需改代码即可运行（未实测增强版）。
+
+两版 GTA Online 不互通，但本方案只用故事模式，无影响。
+
 ## 二、安装步骤（游戏电脑上，Windows）
 
 1. 确认游戏版本与 ScriptHookV 匹配（当前支持 1.0.3889.0 / 1.0.1158.13）。
 2. 安装 **Microsoft .NET Framework 4.8+** 和 **Visual C++ 2019 x64 Redistributable**（Win10 通常已自带）。
 3. 下载 [ScriptHookV](https://www.dev-c.com/gtav/scripthookv)，把 `ScriptHookV.dll` 和 `dinput8.dll`（ASI Loader）复制到 GTA5 根目录（与 `GTA5.exe` 同级）。若已有旧的 `dsound.dll` 先删掉。
-4. 下载 [Community ScriptHookV .NET](https://www.gta5-mods.com/tools/scripthookv-net)，把 `ScriptHookVDotNet.asi`（或新版 `ScriptHookVDotNet-Loader.asi`）、`ScriptHookVDotNet.dll`、`ScriptHookVDotNet3.dll` 复制到 GTA5 根目录。
-   - 若你游戏较新且用 add-on 类 mod，建议用 nightly build（注意新版把加载器改名成 `ScriptHookVDotNet-Loader.asi`，且 `.asi` 和 `.dll` 都要装）。
+4. 装 C# 加载器（**按版本二选一，不要混用**）：
+   - **Legacy**：[Community ScriptHookV .NET](https://www.gta5-mods.com/tools/scripthookv-net)，用 nightly build。复制 `ScriptHookVDotNet-Loader.asi`、`ScriptHookVDotNet.dll`、`ScriptHookVDotNet2.dll`、`ScriptHookVDotNet3.dll` 到 GTA5 根目录（`.asi` 和所有 `.dll` 必须同一版本，不能混搭）。
+   - **Enhanced**：[ScriptHookVDotNetEnhanced (SHVDNE)](https://www.gta5-mods.com/tools/script-hook-v-net-enhanced) v1.1.0.6，复制 `ScriptHookVDotNet.asi`、`ScriptHookVDotNet2.dll`、`ScriptHookVDotNet3.dll`、`ScriptHookVDotNet.ini`、`MinHook.x64.dll` 到 GTA5 根目录。原版 SHVDN 在 Enhanced 上不工作。
 5. 用 Visual Studio（或 `csc`）把 `GchairTelemetry.cs` 编译成 `GchairTelemetry.dll`，放进 `GTA5根目录\scripts\`（没有就新建）。
    - 目标框架 .NET Framework 4.8，引用 `ScriptHookVDotNet3.dll`（v3 API）。
    - 图省事也可直接把 `GchairTelemetry.cs` 源码（改名 `GchairTelemetry.3.cs`）丢进 `scripts\`，SHVDN 会自动编译，但启动会慢几秒。
