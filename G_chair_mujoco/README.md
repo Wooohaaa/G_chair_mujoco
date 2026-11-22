@@ -68,6 +68,14 @@ python3 -m venv .venv
 几何默认值与实物底座/座椅板尺寸相符，可在 `params.py` 中按你的实际测量值修改后
 重新 `python build_model.py` 生成 `model.xml`。
 
+## 外观（2026-11 增强）
+
+已按成品照片把抽象模型改成接近实物的外观：铝型材框架底座/平台、黑色缸筒 +
+银色活塞杆 + 伺服电机盒、桶形赛车座椅（侧翼/肩翼/头枕）、方向盘与显示器支架。
+这些**全部是纯视觉 geom**——不参与碰撞、不改 inertial/joint/site/equality/actuator，
+所以运动学与跟踪精度完全不变（校验仍 PASS）。全景图见 `output/appearance_full.png`。
+重新生成：`python build_model.py`。
+
 ## 校验结果（`python sim.py --validate`）
 
 | 项目 | 结果 |

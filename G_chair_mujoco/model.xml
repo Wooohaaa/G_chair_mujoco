@@ -4,22 +4,31 @@
   <visual>
     <global offwidth="1280" offheight="720"/>
     <quality shadowsize="4096"/>
-    <headlight ambient="0.35 0.35 0.35" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+    <headlight ambient="0.55 0.55 0.55" diffuse="0.7 0.7 0.7" specular="0.15 0.15 0.15"/>
   </visual>
   <asset>
     <texture name="grid" type="2d" builtin="checker" rgb1="0.22 0.24 0.28" rgb2="0.30 0.32 0.36" width="512" height="512"/>
     <material name="grid" texture="grid" texrepeat="8 8" reflectance="0.05"/>
     <material name="metal" rgba="0.64 0.66 0.72 1" metallic="0.85" roughness="0.35"/>
     <material name="rod" rgba="0.85 0.86 0.90 1" metallic="0.9" roughness="0.2"/>
-    <material name="dark" rgba="0.12 0.13 0.15 1" metallic="0.2" roughness="0.6"/>
-    <material name="seat" rgba="0.09 0.09 0.11 1" metallic="0.0" roughness="0.85"/>
+    <material name="dark" rgba="0.10 0.11 0.13 1" metallic="0.3" roughness="0.65"/>
+    <material name="seat" rgba="0.06 0.06 0.07 1" metallic="0.0" roughness="0.9"/>
     <material name="joint" rgba="0.20 0.45 0.85 1" metallic="0.7" roughness="0.3"/>
+    <material name="extrusion" rgba="0.26 0.27 0.30 1" metallic="0.65" roughness="0.45"/>
+    <material name="barrel" rgba="0.20 0.21 0.24 1" metallic="0.5" roughness="0.5"/>
+    <material name="motor" rgba="0.22 0.23 0.25 1" metallic="0.6" roughness="0.4"/>
+    <material name="screen" rgba="0.02 0.03 0.05 1" metallic="0.1" roughness="0.25"/>
   </asset>
   <worldbody>
     <light name="key" pos="1.6 -1.6 2.6" dir="-0.45 0.45 -1" directional="true" diffuse="0.8 0.8 0.8" castshadow="true"/>
+    <light name="fill" pos="-1.8 1.4 2.0" dir="0.5 -0.4 -0.8" directional="true" diffuse="0.45 0.45 0.45"/>
     <geom name="floor" type="plane" size="4 4 0.05" material="grid" contype="1" conaffinity="1"/>
     <body name="base_plate" pos="0 0 0">
-      <geom name="base" type="cylinder" size="0.585 0.02" pos="0 0 -0.02" material="dark" contype="0" conaffinity="0"/>
+      <geom name="base_panel" type="box" size="0.55575 0.55575 0.008" pos="0 0 -0.014" material="dark" contype="0" conaffinity="0"/>
+      <geom name="base_frame_front" type="box" size="0.595 0.025 0.025" pos="0 -0.595 0" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="base_frame_rear" type="box" size="0.595 0.025 0.025" pos="0 0.595 0" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="base_frame_left" type="box" size="0.025 0.595 0.025" pos="-0.595 0 0" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="base_frame_right" type="box" size="0.025 0.595 0.025" pos="0.595 0 0" material="extrusion" contype="0" conaffinity="0"/>
       <geom name="socket_cup_0" type="cylinder" size="0.038 0.014" pos="0.5282 -0.112272 0.004" material="dark" contype="0" conaffinity="0"/>
       <geom name="socket_ball_0" type="sphere" size="0.030" pos="0.5282 -0.112272 -0.014" material="metal" contype="0" conaffinity="0"/>
       <geom name="socket_cup_1" type="cylinder" size="0.038 0.014" pos="0.5282 0.112272 0.004" material="dark" contype="0" conaffinity="0"/>
@@ -36,10 +45,31 @@
     <body name="platform" pos="0 0 0.66390329" quat="1 0 0 0">
       <freejoint name="platform_free"/>
       <inertial pos="0 0 0.12" mass="45" diaginertia="1.7 1.7 2.6"/>
-      <geom name="deck" type="cylinder" size="0.335 0.012" pos="0 0 0" material="metal" contype="0" conaffinity="0"/>
-      <geom name="seat_base" type="box" size="0.24 0.24 0.045" pos="0 0 0.06" material="seat" contype="0" conaffinity="0"/>
-      <geom name="seat_back" type="box" size="0.24 0.05 0.24" pos="0 0.23 0.30" material="seat" contype="0" conaffinity="0"/>
-      <geom name="seat_head" type="box" size="0.12 0.05 0.08" pos="0 0.23 0.58" material="seat" contype="0" conaffinity="0"/>
+      <geom name="deck" type="box" size="0.3082 0.3082 0.008" pos="0 0 0" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="plat_frame_front" type="box" size="0.345 0.022 0.022" pos="0 -0.345 0" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="plat_frame_rear" type="box" size="0.345 0.022 0.022" pos="0 0.345 0" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="plat_frame_left" type="box" size="0.022 0.345 0.022" pos="-0.345 0 0" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="plat_frame_right" type="box" size="0.022 0.345 0.022" pos="0.345 0 0" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="seat_base" type="box" size="0.23 0.24 0.045" pos="0 0 0.06" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_bolster_l" type="box" size="0.045 0.24 0.065" pos="-0.225 0 0.075" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_back_bolster_l" type="box" size="0.05 0.055 0.28" pos="-0.21 0.23 0.33" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_shoulder_l" type="box" size="0.06 0.06 0.10" pos="-0.2 0.23 0.50" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_bolster_r" type="box" size="0.045 0.24 0.065" pos="0.225 0 0.075" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_back_bolster_r" type="box" size="0.05 0.055 0.28" pos="0.21 0.23 0.33" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_shoulder_r" type="box" size="0.06 0.06 0.10" pos="0.2 0.23 0.50" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_back" type="box" size="0.22 0.05 0.26" pos="0 0.23 0.32" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_head" type="box" size="0.11 0.05 0.09" pos="0 0.23 0.60" material="seat" contype="0" conaffinity="0"/>
+      <geom name="wheel_mount_l" type="box" size="0.02 0.22 0.02" pos="-0.19 -0.20 0.36" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="wheel_mount_r" type="box" size="0.02 0.22 0.02" pos="0.19 -0.20 0.36" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="steering_wheel" type="cylinder" size="0.155 0.012" pos="0 -0.42 0.46" quat="0.70710678 0.70710678 0 0" material="dark" contype="0" conaffinity="0"/>
+      <geom name="wheel_spoke_v" type="box" size="0.012 0.012 0.15" pos="0 -0.42 0.46" material="dark" contype="0" conaffinity="0"/>
+      <geom name="wheel_spoke_h" type="box" size="0.15 0.012 0.012" pos="0 -0.42 0.46" material="dark" contype="0" conaffinity="0"/>
+      <geom name="wheel_stem" type="box" size="0.02 0.02 0.06" pos="0 -0.42 0.41" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="monitor_post_l" type="box" size="0.015 0.015 0.40" pos="-0.15 -0.36 0.44" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="monitor_post_r" type="box" size="0.015 0.015 0.40" pos="0.15 -0.36 0.44" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="monitor_brace" type="box" size="0.18 0.02 0.015" pos="0 -0.56 0.82" material="extrusion" contype="0" conaffinity="0"/>
+      <geom name="monitor_frame" type="box" size="0.36 0.010 0.22" pos="0 -0.62 0.82" material="dark" contype="0" conaffinity="0"/>
+      <geom name="monitor_screen" type="box" size="0.34 0.006 0.20" pos="0 -0.615 0.82" material="screen" contype="0" conaffinity="0"/>
       <site name="plat_0" pos="0.21580194 -0.20839751 0" size="0.012"/>
       <site name="plat_1" pos="0.21580194 0.20839751 0" size="0.012"/>
       <site name="plat_2" pos="0.072576569 0.29108872 0" size="0.012"/>
@@ -49,7 +79,10 @@
     </body>
     <body name="legA_0" pos="0.5281997 -0.11227231 0" quat="0.97395241 0.06668648 -0.21672473 0">
       <joint name="legA_0_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
-      <geom name="barrel_0" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="barrel_0" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
+      <geom name="barrel_cap_0" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
+      <geom name="servo_0" type="box" size="0.055 0.070 0.085" pos="0.055 0 0.10" material="motor" contype="0" conaffinity="0"/>
+      <geom name="servo_cap_0" type="cylinder" size="0.045 0.015" pos="0.105 0 0.10" quat="0.70710678 0 0.70710678 0" material="dark" contype="0" conaffinity="0"/>
       <geom name="ballbase_0" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
       <body name="legB_0" pos="0 0 0">
         <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
@@ -64,7 +97,10 @@
     </body>
     <body name="legA_1" pos="0.5281997 0.11227231 0" quat="0.97395241 -0.06668648 -0.21672473 0">
       <joint name="legA_1_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
-      <geom name="barrel_1" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="barrel_1" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
+      <geom name="barrel_cap_1" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
+      <geom name="servo_1" type="box" size="0.055 0.070 0.085" pos="0.055 0 0.10" material="motor" contype="0" conaffinity="0"/>
+      <geom name="servo_cap_1" type="cylinder" size="0.045 0.015" pos="0.105 0 0.10" quat="0.70710678 0 0.70710678 0" material="dark" contype="0" conaffinity="0"/>
       <geom name="ballbase_1" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
       <body name="legB_1" pos="0 0 0">
         <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
@@ -79,7 +115,10 @@
     </body>
     <body name="legA_2" pos="-0.16686918 0.51357052 0" quat="0.97395241 0.15434588 0.16611455 -0">
       <joint name="legA_2_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
-      <geom name="barrel_2" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="barrel_2" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
+      <geom name="barrel_cap_2" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
+      <geom name="servo_2" type="box" size="0.055 0.070 0.085" pos="0.055 0 0.10" material="motor" contype="0" conaffinity="0"/>
+      <geom name="servo_cap_2" type="cylinder" size="0.045 0.015" pos="0.105 0 0.10" quat="0.70710678 0 0.70710678 0" material="dark" contype="0" conaffinity="0"/>
       <geom name="ballbase_2" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
       <body name="legB_2" pos="0 0 0">
         <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
@@ -94,7 +133,10 @@
     </body>
     <body name="legA_3" pos="-0.36133053 0.40129821 0" quat="0.97395241 0.22103236 0.050610177 -0">
       <joint name="legA_3_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
-      <geom name="barrel_3" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="barrel_3" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
+      <geom name="barrel_cap_3" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
+      <geom name="servo_3" type="box" size="0.055 0.070 0.085" pos="0.055 0 0.10" material="motor" contype="0" conaffinity="0"/>
+      <geom name="servo_cap_3" type="cylinder" size="0.045 0.015" pos="0.105 0 0.10" quat="0.70710678 0 0.70710678 0" material="dark" contype="0" conaffinity="0"/>
       <geom name="ballbase_3" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
       <body name="legB_3" pos="0 0 0">
         <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
@@ -109,7 +151,10 @@
     </body>
     <body name="legA_4" pos="-0.36133053 -0.40129821 0" quat="0.97395241 -0.22103236 0.050610177 0">
       <joint name="legA_4_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
-      <geom name="barrel_4" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="barrel_4" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
+      <geom name="barrel_cap_4" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
+      <geom name="servo_4" type="box" size="0.055 0.070 0.085" pos="0.055 0 0.10" material="motor" contype="0" conaffinity="0"/>
+      <geom name="servo_cap_4" type="cylinder" size="0.045 0.015" pos="0.105 0 0.10" quat="0.70710678 0 0.70710678 0" material="dark" contype="0" conaffinity="0"/>
       <geom name="ballbase_4" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
       <body name="legB_4" pos="0 0 0">
         <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
@@ -124,7 +169,10 @@
     </body>
     <body name="legA_5" pos="-0.16686918 -0.51357052 0" quat="0.97395241 -0.15434588 0.16611455 0">
       <joint name="legA_5_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
-      <geom name="barrel_5" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="barrel_5" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
+      <geom name="barrel_cap_5" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
+      <geom name="servo_5" type="box" size="0.055 0.070 0.085" pos="0.055 0 0.10" material="motor" contype="0" conaffinity="0"/>
+      <geom name="servo_cap_5" type="cylinder" size="0.045 0.015" pos="0.105 0 0.10" quat="0.70710678 0 0.70710678 0" material="dark" contype="0" conaffinity="0"/>
       <geom name="ballbase_5" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
       <body name="legB_5" pos="0 0 0">
         <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
