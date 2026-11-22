@@ -1,0 +1,161 @@
+<mujoco model="gchair_stewart">
+  <compiler angle="radian" autolimits="true"/>
+  <option timestep="0.002" integrator="implicitfast" gravity="0 0 -9.81" iterations="100" tolerance="1e-9"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+    <quality shadowsize="4096"/>
+    <headlight ambient="0.35 0.35 0.35" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+  </visual>
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.22 0.24 0.28" rgb2="0.30 0.32 0.36" width="512" height="512"/>
+    <material name="grid" texture="grid" texrepeat="8 8" reflectance="0.05"/>
+    <material name="metal" rgba="0.64 0.66 0.72 1" metallic="0.85" roughness="0.35"/>
+    <material name="rod" rgba="0.85 0.86 0.90 1" metallic="0.9" roughness="0.2"/>
+    <material name="dark" rgba="0.12 0.13 0.15 1" metallic="0.2" roughness="0.6"/>
+    <material name="seat" rgba="0.09 0.09 0.11 1" metallic="0.0" roughness="0.85"/>
+    <material name="joint" rgba="0.20 0.45 0.85 1" metallic="0.7" roughness="0.3"/>
+  </asset>
+  <worldbody>
+    <light name="key" pos="1.6 -1.6 2.6" dir="-0.45 0.45 -1" directional="true" diffuse="0.8 0.8 0.8" castshadow="true"/>
+    <geom name="floor" type="plane" size="4 4 0.05" material="grid" contype="1" conaffinity="1"/>
+    <body name="base_plate" pos="0 0 0">
+      <geom name="base" type="cylinder" size="0.585 0.02" pos="0 0 -0.02" material="dark" contype="0" conaffinity="0"/>
+    </body>
+    <body name="platform" pos="0 0 0.66390329" quat="1 0 0 0">
+      <freejoint name="platform_free"/>
+      <inertial pos="0 0 0.12" mass="45" diaginertia="1.7 1.7 2.6"/>
+      <geom name="deck" type="cylinder" size="0.335 0.012" pos="0 0 0" material="metal" contype="0" conaffinity="0"/>
+      <geom name="seat_base" type="box" size="0.24 0.24 0.045" pos="0 0 0.06" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_back" type="box" size="0.24 0.05 0.24" pos="0 0.23 0.30" material="seat" contype="0" conaffinity="0"/>
+      <geom name="seat_head" type="box" size="0.12 0.05 0.08" pos="0 0.23 0.58" material="seat" contype="0" conaffinity="0"/>
+      <site name="plat_0" pos="0.21580194 -0.20839751 0" size="0.012"/>
+      <site name="plat_1" pos="0.21580194 0.20839751 0" size="0.012"/>
+      <site name="plat_2" pos="0.072576569 0.29108872 0" size="0.012"/>
+      <site name="plat_3" pos="-0.28837851 0.082691207 0" size="0.012"/>
+      <site name="plat_4" pos="-0.28837851 -0.082691207 0" size="0.012"/>
+      <site name="plat_5" pos="0.072576569 -0.29108872 0" size="0.012"/>
+    </body>
+    <body name="legA_0" pos="0.5281997 -0.11227231 0" quat="0.97395241 0.06668648 -0.21672473 0">
+      <joint name="legA_0_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+      <geom name="barrel_0" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="ballbase_0" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
+      <body name="legB_0" pos="0 0 0">
+        <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
+        <joint name="legB_0_y" type="hinge" axis="0 1 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+        <body name="legC_0" pos="0 0 0">
+          <joint name="leg_0" type="slide" axis="0 0 1" range="-0.095 0.095" damping="0.4" armature="0.01"/>
+          <geom name="rod_0" type="cylinder" size="0.020 0.22" pos="0 0 0.52" material="rod" contype="0" conaffinity="0"/>
+          <geom name="balltop_0" type="sphere" size="0.020" pos="0 0 0.74" material="joint" contype="0" conaffinity="0"/>
+          <site name="tip_0" pos="0 0 0.74" size="0.010"/>
+        </body>
+      </body>
+    </body>
+    <body name="legA_1" pos="0.5281997 0.11227231 0" quat="0.97395241 -0.06668648 -0.21672473 0">
+      <joint name="legA_1_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+      <geom name="barrel_1" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="ballbase_1" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
+      <body name="legB_1" pos="0 0 0">
+        <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
+        <joint name="legB_1_y" type="hinge" axis="0 1 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+        <body name="legC_1" pos="0 0 0">
+          <joint name="leg_1" type="slide" axis="0 0 1" range="-0.095 0.095" damping="0.4" armature="0.01"/>
+          <geom name="rod_1" type="cylinder" size="0.020 0.22" pos="0 0 0.52" material="rod" contype="0" conaffinity="0"/>
+          <geom name="balltop_1" type="sphere" size="0.020" pos="0 0 0.74" material="joint" contype="0" conaffinity="0"/>
+          <site name="tip_1" pos="0 0 0.74" size="0.010"/>
+        </body>
+      </body>
+    </body>
+    <body name="legA_2" pos="-0.16686918 0.51357052 0" quat="0.97395241 0.15434588 0.16611455 -0">
+      <joint name="legA_2_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+      <geom name="barrel_2" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="ballbase_2" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
+      <body name="legB_2" pos="0 0 0">
+        <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
+        <joint name="legB_2_y" type="hinge" axis="0 1 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+        <body name="legC_2" pos="0 0 0">
+          <joint name="leg_2" type="slide" axis="0 0 1" range="-0.095 0.095" damping="0.4" armature="0.01"/>
+          <geom name="rod_2" type="cylinder" size="0.020 0.22" pos="0 0 0.52" material="rod" contype="0" conaffinity="0"/>
+          <geom name="balltop_2" type="sphere" size="0.020" pos="0 0 0.74" material="joint" contype="0" conaffinity="0"/>
+          <site name="tip_2" pos="0 0 0.74" size="0.010"/>
+        </body>
+      </body>
+    </body>
+    <body name="legA_3" pos="-0.36133053 0.40129821 0" quat="0.97395241 0.22103236 0.050610177 -0">
+      <joint name="legA_3_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+      <geom name="barrel_3" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="ballbase_3" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
+      <body name="legB_3" pos="0 0 0">
+        <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
+        <joint name="legB_3_y" type="hinge" axis="0 1 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+        <body name="legC_3" pos="0 0 0">
+          <joint name="leg_3" type="slide" axis="0 0 1" range="-0.095 0.095" damping="0.4" armature="0.01"/>
+          <geom name="rod_3" type="cylinder" size="0.020 0.22" pos="0 0 0.52" material="rod" contype="0" conaffinity="0"/>
+          <geom name="balltop_3" type="sphere" size="0.020" pos="0 0 0.74" material="joint" contype="0" conaffinity="0"/>
+          <site name="tip_3" pos="0 0 0.74" size="0.010"/>
+        </body>
+      </body>
+    </body>
+    <body name="legA_4" pos="-0.36133053 -0.40129821 0" quat="0.97395241 -0.22103236 0.050610177 0">
+      <joint name="legA_4_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+      <geom name="barrel_4" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="ballbase_4" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
+      <body name="legB_4" pos="0 0 0">
+        <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
+        <joint name="legB_4_y" type="hinge" axis="0 1 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+        <body name="legC_4" pos="0 0 0">
+          <joint name="leg_4" type="slide" axis="0 0 1" range="-0.095 0.095" damping="0.4" armature="0.01"/>
+          <geom name="rod_4" type="cylinder" size="0.020 0.22" pos="0 0 0.52" material="rod" contype="0" conaffinity="0"/>
+          <geom name="balltop_4" type="sphere" size="0.020" pos="0 0 0.74" material="joint" contype="0" conaffinity="0"/>
+          <site name="tip_4" pos="0 0 0.74" size="0.010"/>
+        </body>
+      </body>
+    </body>
+    <body name="legA_5" pos="-0.16686918 -0.51357052 0" quat="0.97395241 -0.15434588 0.16611455 0">
+      <joint name="legA_5_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+      <geom name="barrel_5" type="cylinder" size="0.034 0.20" pos="0 0 0.22" material="metal" contype="0" conaffinity="0"/>
+      <geom name="ballbase_5" type="sphere" size="0.024" pos="0 0 0" material="joint" contype="0" conaffinity="0"/>
+      <body name="legB_5" pos="0 0 0">
+        <inertial pos="0 0 0.05" mass="0.15" diaginertia="1e-4 1e-4 1e-4"/>
+        <joint name="legB_5_y" type="hinge" axis="0 1 0" range="-0.6 0.6" damping="2" armature="0.01"/>
+        <body name="legC_5" pos="0 0 0">
+          <joint name="leg_5" type="slide" axis="0 0 1" range="-0.095 0.095" damping="0.4" armature="0.01"/>
+          <geom name="rod_5" type="cylinder" size="0.020 0.22" pos="0 0 0.52" material="rod" contype="0" conaffinity="0"/>
+          <geom name="balltop_5" type="sphere" size="0.020" pos="0 0 0.74" material="joint" contype="0" conaffinity="0"/>
+          <site name="tip_5" pos="0 0 0.74" size="0.010"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <equality>
+    <connect name="close_0" site1="tip_0" site2="plat_0" solref="0.002 1" solimp="0.92 0.96 0.001"/>
+    <connect name="close_1" site1="tip_1" site2="plat_1" solref="0.002 1" solimp="0.92 0.96 0.001"/>
+    <connect name="close_2" site1="tip_2" site2="plat_2" solref="0.002 1" solimp="0.92 0.96 0.001"/>
+    <connect name="close_3" site1="tip_3" site2="plat_3" solref="0.002 1" solimp="0.92 0.96 0.001"/>
+    <connect name="close_4" site1="tip_4" site2="plat_4" solref="0.002 1" solimp="0.92 0.96 0.001"/>
+    <connect name="close_5" site1="tip_5" site2="plat_5" solref="0.002 1" solimp="0.92 0.96 0.001"/>
+  </equality>
+  <actuator>
+    <position name="act_0" joint="leg_0" kp="80000" kv="2000" ctrlrange="-0.095 0.095" forcerange="-4000 4000" ctrllimited="true" forcelimited="true"/>
+    <position name="act_1" joint="leg_1" kp="80000" kv="2000" ctrlrange="-0.095 0.095" forcerange="-4000 4000" ctrllimited="true" forcelimited="true"/>
+    <position name="act_2" joint="leg_2" kp="80000" kv="2000" ctrlrange="-0.095 0.095" forcerange="-4000 4000" ctrllimited="true" forcelimited="true"/>
+    <position name="act_3" joint="leg_3" kp="80000" kv="2000" ctrlrange="-0.095 0.095" forcerange="-4000 4000" ctrllimited="true" forcelimited="true"/>
+    <position name="act_4" joint="leg_4" kp="80000" kv="2000" ctrlrange="-0.095 0.095" forcerange="-4000 4000" ctrllimited="true" forcelimited="true"/>
+    <position name="act_5" joint="leg_5" kp="80000" kv="2000" ctrlrange="-0.095 0.095" forcerange="-4000 4000" ctrllimited="true" forcelimited="true"/>
+  </actuator>
+  <sensor>
+    <framepos name="platform_pos" objtype="body" objname="platform"/>
+    <framequat name="platform_quat" objtype="body" objname="platform"/>
+    <jointpos name="leg_pos_0" joint="leg_0"/>
+    <jointvel name="leg_vel_0" joint="leg_0"/>
+    <jointpos name="leg_pos_1" joint="leg_1"/>
+    <jointvel name="leg_vel_1" joint="leg_1"/>
+    <jointpos name="leg_pos_2" joint="leg_2"/>
+    <jointvel name="leg_vel_2" joint="leg_2"/>
+    <jointpos name="leg_pos_3" joint="leg_3"/>
+    <jointvel name="leg_vel_3" joint="leg_3"/>
+    <jointpos name="leg_pos_4" joint="leg_4"/>
+    <jointvel name="leg_vel_4" joint="leg_4"/>
+    <jointpos name="leg_pos_5" joint="leg_5"/>
+    <jointvel name="leg_vel_5" joint="leg_5"/>
+  </sensor>
+</mujoco>
