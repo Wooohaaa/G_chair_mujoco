@@ -42,6 +42,38 @@ from motion_pipeline import MotionPipeline
 START = bytes([255, 255])
 DT = SIM['dt']            # 0.02s = 50Hz, 与原链路一致
 
+# 固件回传状态（$帧），由后台读线程更新
+_hw_status = {'limit': 0, 'enabled': 0, 'watchdog': 0, 'frames': 0}
+_hw_rx_buf = b''
+
+
+def _status_rx_loop(port):
+    """读 ESP32 每 50ms 回传的 $cur..,tgt..,limit,enabled,wd 帧。"""
+    global _hw_rx_buf
+    while port and port.is_open:
+        try:
+            chunk = port.read(port.in_waiting or 1)
+        except Exception:
+            break
+        if not chunk:
+            time.sleep(0.005)
+            continue
+        _hw_rx_buf += chunk
+        while b'\n' in _hw_rx_buf:
+            line, _hw_rx_buf = _hw_rx_buf.split(b'\n', 1)
+            try:
+                s = line.decode('ascii', 'ignore').strip()
+                if not s.startswith('$'):
+                    continue
+                parts = s[1:].split(',')
+                if len(parts) >= 15:
+                    _hw_status['limit'] = int(parts[12])
+                    _hw_status['enabled'] = int(parts[13])
+                    _hw_status['watchdog'] = int(parts[14])
+                    _hw_status['frames'] += 1
+            except (ValueError, IndexError):
+                pass
+
 
 def zero_telemetry():
     """断流时的安全帧: 全 0 → 平台回中位。"""
@@ -109,11 +141,16 @@ def run(args):
            args.lpf, args.washout))
 
     ser1 = ser2 = None
+    status_thread = None
     if not args.dry_run:
         ser1 = open_serial(args.port1, args.baud)
         if not args.single_board:
             ser2 = open_serial(args.port2, args.baud)
         print('[serial] 已打开 %s%s' % (args.port1, ('' if args.single_board else ' + ' + args.port2)))
+        # 启动状态回传读取线程（限位/看门狗/使能监控）
+        import threading
+        status_thread = threading.Thread(target=_status_rx_loop, args=(ser1,), daemon=True)
+        status_thread.start()
 
     print('[bridge] 开始转发 (Ctrl+C 停止, --dry-run 不实际写串口)')
     t0 = time.time()
@@ -149,8 +186,10 @@ def run(args):
 
             frames += 1
             if args.verbose and frames % 50 == 0:
-                print(' t=%.1fs 帧=%d 断流=%d  disp=%s' %
-                      (time.time() - t0, frames, lost, np.round(disp, 1)), flush=True)
+                print(' t=%.1fs 帧=%d 断流=%d  disp=%s | HW: en=%d wd=%d lim=0x%02x 状态帧=%d' %
+                      (time.time() - t0, frames, lost, np.round(disp, 1),
+                       _hw_status['enabled'], _hw_status['watchdog'],
+                       _hw_status['limit'], _hw_status['frames']), flush=True)
             # 累进目标时间，避免单帧处理超时导致速率漂移（与 sim_udp 一致）
             next_t += DT
             time.sleep(max(0, next_t - time.time()))

@@ -37,7 +37,8 @@ static void set_period(Stepper &s, uint32_t period_us) {
     s.item.level0 = 1;  s.item.duration0 = high;
     s.item.level1 = 0;  s.item.duration1 = low;
     if (s.running) {
-        rmt_write_items(s.chan, &s.item, 1, false);   // loop_en=true 时循环发
+        // 等 RMT 把新 symbol 加载完再返回，避免 DMA 尚未读取就被下次修改导致波形错乱
+        rmt_write_items(s.chan, &s.item, 1, true);
     }
 }
 
@@ -66,7 +67,7 @@ static void rmt_init_axis(int i) {
 }
 
 static void rmt_start(Stepper &s) {
-    rmt_write_items(s.chan, &s.item, 1, false);   // loop_en 自动循环
+    rmt_write_items(s.chan, &s.item, 1, true);    // 等加载完成；loop_en 自动循环
     s.running = true;
 }
 
@@ -133,9 +134,19 @@ static unsigned long last_frame_ms = 0;
 static bool enabled = false;
 
 static void parse_byte(uint8_t b) {
+    // 失步自恢复：若已收到帧头但超过 100ms 未凑满一帧，清零状态重新找帧头。
+    // 防止字节丢失后状态机卡在 byte_idx 奇数态、后续帧头被当数据吞掉。
+    static unsigned long frame_start_ms = 0;
+    if (header_count > 0 || byte_idx > 0) {
+        if (millis() - frame_start_ms > 100UL) {
+            header_count = 0; byte_idx = 0;
+        }
+    }
     if (header_count < 2) {
-        if (b == FRAME_HEADER_BYTE) header_count++;
-        else { header_count = 0; byte_idx = 0; }
+        if (b == FRAME_HEADER_BYTE) {
+            if (header_count == 0) frame_start_ms = millis();
+            header_count++;
+        } else { header_count = 0; byte_idx = 0; }
         return;
     }
     if (byte_idx % 2 == 0) acc = (uint16_t)b << 8;
@@ -169,7 +180,9 @@ void setup() {
 }
 
 void loop() {
-    while (Serial.available()) parse_byte((uint8_t)Serial.read());
+    // 限制每循环解析字节数，避免串口满速灌入时长时间阻塞限位检测/脉冲更新
+    int max_bytes = 32;
+    while (Serial.available() && max_bytes-- > 0) parse_byte((uint8_t)Serial.read());
 
     // 限位触发: 立即停该轴
     for (int i = 0; i < NUM_AXES; i++) {

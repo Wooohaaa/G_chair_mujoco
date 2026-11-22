@@ -54,19 +54,26 @@ class ArduinoController:
         """物理位移(mm) → Arduino 位置单位"""
         return int((disp_mm + self.xingcheng / 2.0) / self.xingcheng * self.max_pos)
 
-    def displacement_to_flypt_16bit(self, disp_mm, range_mm=95.0):
-        """
-        物理位移(mm) → FlyPT 16-bit 输出值
-        disp_mm 范围 [-range, +range]
-        16-bit 范围 [0, 65535]
-        0 → -range, 32768 → 0, 65535 → +range
-        """
-        val = (disp_mm + range_mm) / (2.0 * range_mm) * 65535.0
-        return int(np.clip(val, 0, 65535))
+    # 电缸物理半行程 = 总行程 192mm / 2 = 96mm。
+    # 16bit 的 0 ↔ 0 步 ↔ -96mm，65535 ↔ 38400 步 ↔ +96mm（固件除数 65535/38400）。
+    # 运动指令仍限幅在 ±95mm（留 1mm 机械余量），但 16bit 映射必须按物理 96mm，
+    # 否则 -95mm 指令会被映射到 0 步 = -96mm，产生 1mm 满量程误差。
+    PHYS_HALF_STROKE_MM = 96.0
 
-    def flypt_16bit_to_displacement(self, val_16bit, range_mm=95.0):
-        """FlyPT 16-bit 值 → 物理位移(mm)"""
-        return (val_16bit / 65535.0) * (2.0 * range_mm) - range_mm
+    def displacement_to_flypt_16bit(self, disp_mm, range_mm=None):
+        """
+        物理位移(mm) → FlyPT 16-bit 输出值（按物理半行程 96mm 映射）。
+        16-bit: 0 → -96mm, 32768 → 0mm, 65535 → +96mm。
+        range_mm 参数保留以兼容旧调用，映射统一用 PHYS_HALF_STROKE_MM。
+        """
+        r = self.PHYS_HALF_STROKE_MM
+        val = (disp_mm + r) / (2.0 * r) * 65535.0
+        return int(round(np.clip(val, 0, 65535)))
+
+    def flypt_16bit_to_displacement(self, val_16bit, range_mm=None):
+        """FlyPT 16-bit 值 → 物理位移(mm)（按物理半行程 96mm）"""
+        r = self.PHYS_HALF_STROKE_MM
+        return (val_16bit / 65535.0) * (2.0 * r) - r
 
     def parse_serial(self, data_bytes):
         """

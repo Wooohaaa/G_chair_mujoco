@@ -14,7 +14,9 @@
 #define XINGCHENG_MM        192.0f
 #define MAX_POS_STEPS       38400L      // 4ms 窗口内的步数上限
 #define CENTER_POS_STEPS    19200L
-#define MAP_DIVISOR         1.7f        // 16-bit / 1.7 -> 步数
+// 修正原 .ino 的 1.7 近似误差：1.7 会让 0mm(16bit=32768) → 19275 步 = +0.37mm 偏置，
+// 且 ±95mm 顶到 ±96mm 钳位。精确除数 = 65535/38400，使 0mm→19200 步、±95mm→±19200 步。
+#define MAP_DIVISOR         1.7078125f  // 65535/38400，精确中位映射
 #define SAMPLE_PERIOD_US    4000UL      // 与 Mega 的 samplePeriod=4000 一致
 #define MIN_PULSE_PERIOD_US 39UL
 #define MAX_PULSE_PERIOD_US 4000UL
