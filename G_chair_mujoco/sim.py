@@ -74,6 +74,18 @@ class GChairSim:
         self.steps_per_ctrl = max(1, int(round(dt_ctrl / self.model.opt.timestep)))
         return disp, lim
 
+    def command_displacement(self, disp_mm, dt_ctrl=0.02):
+        """直接设置 6 缸位移(mm)，跳过内部 IK。
+
+        用于"仿真=实机"统一：缸位移由共用的 MotionPipeline 用同一套实物几何算好，
+        仿真和实机拿到的是同一组数字。这里只负责把位移下发到 MuJoCo 执行器。
+        """
+        lim = np.clip(np.asarray(disp_mm, dtype=float),
+                      -self.p.range * 1000.0, self.p.range * 1000.0)
+        self.data.ctrl[:] = lim / 1000.0
+        self.steps_per_ctrl = max(1, int(round(dt_ctrl / self.model.opt.timestep)))
+        return lim
+
     def step(self):
         for _ in range(self.steps_per_ctrl):
             mujoco.mj_step(self.model, self.data)

@@ -63,13 +63,18 @@ def build_frames_mover(disp_mm):
     f1 = bytearray(START)
     f2 = bytearray(START)
     order1 = [0, 1, 2, 3]
-    order2 = [4, 5, 3, 2]
+    # 实物 2 号板只接了轴5/6，后两通道填 0（中位），
+    # 与 controller.py 的 dispatch_displacements 及实物接线一致。
+    order2 = [4, 5]
     for i in order1:
         v = ctl.board1.displacement_to_flypt_16bit(disp_mm[i])
         f1 += bytes([(v >> 8) & 0xFF, v & 0xFF])
     for i in order2:
         v = ctl.board1.displacement_to_flypt_16bit(disp_mm[i])
         f2 += bytes([(v >> 8) & 0xFF, v & 0xFF])
+    # 2 号板后两通道：0 = 中位（32768 的 16bit）
+    v_mid = ctl.board1.displacement_to_flypt_16bit(0.0)
+    f2 += bytes([(v_mid >> 8) & 0xFF, v_mid & 0xFF]) * 2
     return bytes(f1), bytes(f2)
 
 
@@ -112,15 +117,21 @@ def run(args):
 
     print('[bridge] 开始转发 (Ctrl+C 停止, --dry-run 不实际写串口)')
     t0 = time.time()
+    next_t = t0
     frames = 0
     lost = 0
+    have_signal = False
     try:
         while (args.duration <= 0) or (time.time() - t0 < args.duration):
             item = rx.get(max_age=args.stale)
             if item is None:
+                if have_signal:
+                    motion.reset()   # 断流重置状态，避免 washout 反向瞬态
+                    have_signal = False
                 lost += 1
                 disp = motion.displacements_mm(zero_telemetry(), DT)  # 回中位
             else:
+                have_signal = True
                 disp = motion.displacements_mm(item[0], DT)
             disp = np.asarray(disp, dtype=float)
             disp = np.clip(disp, -95.0, 95.0)
@@ -140,7 +151,9 @@ def run(args):
             if args.verbose and frames % 50 == 0:
                 print(' t=%.1fs 帧=%d 断流=%d  disp=%s' %
                       (time.time() - t0, frames, lost, np.round(disp, 1)), flush=True)
-            time.sleep(max(0, DT - ((time.time() - t0) % DT)))
+            # 累进目标时间，避免单帧处理超时导致速率漂移（与 sim_udp 一致）
+            next_t += DT
+            time.sleep(max(0, next_t - time.time()))
     except KeyboardInterrupt:
         print('\n[bridge] 停止')
     finally:

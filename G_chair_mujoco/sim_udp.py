@@ -149,6 +149,7 @@ def run(args):
     log = {k: [] for k in ('t', 'cmd', 'act', 'leg_cmd', 'leg_act', 'sat')}
     frames = 0
     lost = 0
+    have_signal = False
     wall0 = time.time()
     n = int(args.duration / dt_ctrl) if args.duration > 0 else 10 ** 9
 
@@ -158,13 +159,18 @@ def run(args):
             t = k * dt_ctrl
             item = rx.get(max_age=args.stale)
             if item is None:
-                cmd = motion.pose(ZERO_TELE, dt_ctrl)  # 回中位
+                if have_signal:
+                    motion.reset()   # 断流：重置低通/洗出/限速状态，避免反向瞬态
+                    have_signal = False
+                cmd, disp = motion.pose_and_disp(ZERO_TELE, dt_ctrl)  # 回中位
                 lost += 1
             else:
                 tele, _age = item
-                cmd = motion.pose(tele, dt_ctrl)
+                have_signal = True
+                cmd, disp = motion.pose_and_disp(tele, dt_ctrl)
 
-            disp, lim = sim.command_pose(cmd, dt_ctrl)
+            # 仿真与实机用同一套实物几何算出的缸位移驱动，不再做第二次 IK
+            lim = sim.command_displacement(disp, dt_ctrl)
             sim.step()
             act = sim.platform_pose()
             log['t'].append(t)

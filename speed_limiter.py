@@ -35,7 +35,6 @@ class AdaptiveSpeedLimiter:
             self.prev_disp = np.clip(target_disp, -95, 95).copy()
             return pose
 
-        cap = self.max_speed * self.dt
         out = pose.copy()
         # 若超限，二分回拉插值系数 alpha (0=上一帧, 1=目标)
         lo, hi = 0.0, 1.0

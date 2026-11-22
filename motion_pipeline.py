@@ -25,12 +25,12 @@ for p in (MJ_DIR, SIM_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from config import RIG, TELEMETRY_CHANNELS, SIM
-from kinematics import StewartPlatform
+from config import SIM, FILTERS
+from params import PARAMS
+from gchair_kin import make_rig
 from motion_map import accel_driven_pose, Washout6D
 from pose_from_motion import PoseFromMotion
 from filters import FilterChain
-from config import FILTERS
 from speed_limiter import AdaptiveSpeedLimiter
 
 # 主控硬件能力：minPeriod=39us -> 25641Hz -> 每步(192mm/38400)=0.005mm -> 128mm/s
@@ -56,11 +56,10 @@ class MotionPipeline:
         self.wo = Washout6D(washout_tau) if accel_model and washout_tau > 0 else None
         self.mapper = PoseFromMotion()
         self.filt = FilterChain(FILTERS)
-        # 实机几何 IK（config.RIG）
-        self.rig = StewartPlatform(
-            r_base=RIG['r_base'], r_plat=RIG['r_plat'],
-            leg_middle=RIG['leg_middle'], height=RIG['height'],
-            range_mm=RIG['range'], angle_offset_deg=RIG['angle_offset'])
+        # 统一用【实物几何】PARAMS（与 MuJoCo 模型同源，按成品照对齐的非奇异布局）。
+        # 修复前这里用的是 config.RIG（旧几何 r_base=335，奇异），与仿真 IK 不一致，
+        # 同一位姿两套几何算出的缸位移可差 49.5mm，导致"仿真=实机"不成立。
+        self.rig = make_rig(PARAMS)
         # 自适应缸速限制（在 IK 之前回拉位姿，保证几何一致且只削尖峰）
         self.speed_limiter = (AdaptiveSpeedLimiter(self.rig, max_speed_mm_s=max_speed,
                                                    dt=SIM['dt'])
@@ -103,11 +102,21 @@ class MotionPipeline:
 
     def displacements_mm(self, tele, dt=SIM['dt']):
         """遥测 dict → 6轴缸位移(mm)，已限幅到行程。"""
-        pose = self.pose(tele, dt)
+        pose, disp = self.pose_and_disp(tele, dt)
+        return disp
+
+    def pose_and_disp(self, tele, dt=SIM['dt']):
+        """一次算出 (6DOF位姿, 6轴缸位移)，只推进一次限速器状态。
+
+        仿真端用位姿做 FK 校验/跟踪显示，实机端只用缸位移；
+        两者共用同一套实物几何 PARAMS，保证"仿真=实机"。
+        """
+        pose = self.pose(tele, dt)   # 内部已推进限速器/洗出/低通
         x, y, z, roll, pitch, yaw = pose
         disp = self.rig.inverse_kinematics(x*1000.0, y*1000.0, z*1000.0,
                                            roll, pitch, yaw)
-        return np.clip(disp, -RIG['range'], RIG['range'])
+        disp = np.clip(disp, -PARAMS.range * 1000.0, PARAMS.range * 1000.0)
+        return pose, disp
 
     def reset(self):
         """断流后重置状态（低通/洗出/限速器回到初始），避免残留偏置。"""

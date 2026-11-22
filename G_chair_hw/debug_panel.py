@@ -174,7 +174,6 @@ def send_pending():
         state['cur'] = tgt_steps[:]  # 模拟瞬时到位
         state['enabled'] = 1
         state['watchdog'] = 0
-    state['_last_cmd'] = [round(float(x), 2) for x in disp]
 
 
 # ---------- HTTP + WebSocket ----------
