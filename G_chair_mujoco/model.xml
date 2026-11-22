@@ -29,18 +29,18 @@
       <geom name="base_frame_rear" type="box" size="0.595 0.025 0.025" pos="0 0.595 0" material="extrusion" contype="0" conaffinity="0"/>
       <geom name="base_frame_left" type="box" size="0.025 0.595 0.025" pos="-0.595 0 0" material="extrusion" contype="0" conaffinity="0"/>
       <geom name="base_frame_right" type="box" size="0.025 0.595 0.025" pos="0.595 0 0" material="extrusion" contype="0" conaffinity="0"/>
-      <geom name="socket_cup_0" type="cylinder" size="0.038 0.014" pos="0.5282 -0.112272 0.004" material="dark" contype="0" conaffinity="0"/>
-      <geom name="socket_ball_0" type="sphere" size="0.030" pos="0.5282 -0.112272 -0.014" material="metal" contype="0" conaffinity="0"/>
-      <geom name="socket_cup_1" type="cylinder" size="0.038 0.014" pos="0.5282 0.112272 0.004" material="dark" contype="0" conaffinity="0"/>
-      <geom name="socket_ball_1" type="sphere" size="0.030" pos="0.5282 0.112272 -0.014" material="metal" contype="0" conaffinity="0"/>
-      <geom name="socket_cup_2" type="cylinder" size="0.038 0.014" pos="-0.166869 0.513571 0.004" material="dark" contype="0" conaffinity="0"/>
-      <geom name="socket_ball_2" type="sphere" size="0.030" pos="-0.166869 0.513571 -0.014" material="metal" contype="0" conaffinity="0"/>
-      <geom name="socket_cup_3" type="cylinder" size="0.038 0.014" pos="-0.361331 0.401298 0.004" material="dark" contype="0" conaffinity="0"/>
-      <geom name="socket_ball_3" type="sphere" size="0.030" pos="-0.361331 0.401298 -0.014" material="metal" contype="0" conaffinity="0"/>
-      <geom name="socket_cup_4" type="cylinder" size="0.038 0.014" pos="-0.361331 -0.401298 0.004" material="dark" contype="0" conaffinity="0"/>
-      <geom name="socket_ball_4" type="sphere" size="0.030" pos="-0.361331 -0.401298 -0.014" material="metal" contype="0" conaffinity="0"/>
-      <geom name="socket_cup_5" type="cylinder" size="0.038 0.014" pos="-0.166869 -0.513571 0.004" material="dark" contype="0" conaffinity="0"/>
-      <geom name="socket_ball_5" type="sphere" size="0.030" pos="-0.166869 -0.513571 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_0" type="cylinder" size="0.038 0.014" pos="0.112272 0.5282 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_0" type="sphere" size="0.030" pos="0.112272 0.5282 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_1" type="cylinder" size="0.038 0.014" pos="-0.112272 0.5282 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_1" type="sphere" size="0.030" pos="-0.112272 0.5282 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_2" type="cylinder" size="0.038 0.014" pos="-0.513571 -0.166869 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_2" type="sphere" size="0.030" pos="-0.513571 -0.166869 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_3" type="cylinder" size="0.038 0.014" pos="-0.401298 -0.361331 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_3" type="sphere" size="0.030" pos="-0.401298 -0.361331 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_4" type="cylinder" size="0.038 0.014" pos="0.401298 -0.361331 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_4" type="sphere" size="0.030" pos="0.401298 -0.361331 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_5" type="cylinder" size="0.038 0.014" pos="0.513571 -0.166869 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_5" type="sphere" size="0.030" pos="0.513571 -0.166869 -0.014" material="metal" contype="0" conaffinity="0"/>
     </body>
     <body name="platform" pos="0 0 0.66390329" quat="1 0 0 0">
       <freejoint name="platform_free"/>
@@ -70,14 +70,14 @@
       <geom name="monitor_brace" type="box" size="0.18 0.02 0.015" pos="0 -0.56 0.82" material="extrusion" contype="0" conaffinity="0"/>
       <geom name="monitor_frame" type="box" size="0.36 0.010 0.22" pos="0 -0.62 0.82" material="dark" contype="0" conaffinity="0"/>
       <geom name="monitor_screen" type="box" size="0.34 0.006 0.20" pos="0 -0.615 0.82" material="screen" contype="0" conaffinity="0"/>
-      <site name="plat_0" pos="0.21580194 -0.20839751 0" size="0.012"/>
-      <site name="plat_1" pos="0.21580194 0.20839751 0" size="0.012"/>
-      <site name="plat_2" pos="0.072576569 0.29108872 0" size="0.012"/>
-      <site name="plat_3" pos="-0.28837851 0.082691207 0" size="0.012"/>
-      <site name="plat_4" pos="-0.28837851 -0.082691207 0" size="0.012"/>
-      <site name="plat_5" pos="0.072576569 -0.29108872 0" size="0.012"/>
+      <site name="plat_0" pos="0.20839751 0.21580194 0" size="0.012"/>
+      <site name="plat_1" pos="-0.20839751 0.21580194 0" size="0.012"/>
+      <site name="plat_2" pos="-0.29108872 0.072576569 0" size="0.012"/>
+      <site name="plat_3" pos="-0.082691207 -0.28837851 0" size="0.012"/>
+      <site name="plat_4" pos="0.082691207 -0.28837851 0" size="0.012"/>
+      <site name="plat_5" pos="0.29108872 0.072576569 0" size="0.012"/>
     </body>
-    <body name="legA_0" pos="0.5281997 -0.11227231 0" quat="0.97395241 0.06668648 -0.21672473 0">
+    <body name="legA_0" pos="0.11227231 0.5281997 0" quat="0.97395241 0.21672473 0.06668648 -0">
       <joint name="legA_0_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
       <geom name="barrel_0" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
       <geom name="barrel_cap_0" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
@@ -95,7 +95,7 @@
         </body>
       </body>
     </body>
-    <body name="legA_1" pos="0.5281997 0.11227231 0" quat="0.97395241 -0.06668648 -0.21672473 0">
+    <body name="legA_1" pos="-0.11227231 0.5281997 0" quat="0.97395241 0.21672473 -0.06668648 0">
       <joint name="legA_1_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
       <geom name="barrel_1" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
       <geom name="barrel_cap_1" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
@@ -113,7 +113,7 @@
         </body>
       </body>
     </body>
-    <body name="legA_2" pos="-0.16686918 0.51357052 0" quat="0.97395241 0.15434588 0.16611455 -0">
+    <body name="legA_2" pos="-0.51357052 -0.16686918 0" quat="0.97395241 -0.16611455 0.15434588 0">
       <joint name="legA_2_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
       <geom name="barrel_2" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
       <geom name="barrel_cap_2" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
@@ -131,7 +131,7 @@
         </body>
       </body>
     </body>
-    <body name="legA_3" pos="-0.36133053 0.40129821 0" quat="0.97395241 0.22103236 0.050610177 -0">
+    <body name="legA_3" pos="-0.40129821 -0.36133053 0" quat="0.97395241 -0.050610177 0.22103236 0">
       <joint name="legA_3_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
       <geom name="barrel_3" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
       <geom name="barrel_cap_3" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
@@ -149,7 +149,7 @@
         </body>
       </body>
     </body>
-    <body name="legA_4" pos="-0.36133053 -0.40129821 0" quat="0.97395241 -0.22103236 0.050610177 0">
+    <body name="legA_4" pos="0.40129821 -0.36133053 0" quat="0.97395241 -0.050610177 -0.22103236 0">
       <joint name="legA_4_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
       <geom name="barrel_4" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
       <geom name="barrel_cap_4" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>
@@ -167,7 +167,7 @@
         </body>
       </body>
     </body>
-    <body name="legA_5" pos="-0.16686918 -0.51357052 0" quat="0.97395241 -0.15434588 0.16611455 0">
+    <body name="legA_5" pos="0.51357052 -0.16686918 0" quat="0.97395241 -0.16611455 -0.15434588 0">
       <joint name="legA_5_x" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="2" armature="0.01"/>
       <geom name="barrel_5" type="cylinder" size="0.038 0.22" pos="0 0 0.23" material="barrel" contype="0" conaffinity="0"/>
       <geom name="barrel_cap_5" type="cylinder" size="0.040 0.012" pos="0 0 0.45" material="metal" contype="0" conaffinity="0"/>

@@ -24,8 +24,11 @@ class RigParams:
     plat_radius: float = 0.300        # 平台铰点分布半径 (m)
     base_half_angle_deg: float = 12.0 # 底座每组"对"铰点半张角 (度)
     plat_half_angle_deg: float = 16.0 # 平台每组"对"铰点半张角 (度)
-    base_pair_centers_deg: tuple = (0.0, 120.0, 240.0)
-    plat_pair_centers_deg: tuple = (60.0, 180.0, 300.0)
+    # 实物铰点布置（按成品照）：底座后方正中间(+Y=90°)有一组对铰点，
+    # 另两组在左右对称的 210° / 330°。平台相对底座错位 60° → 150/270/30。
+    # 2026-11 从旧值 (0/120/240)、(60/180/300) 整体旋转 90°，使后方中间有铰点。
+    base_pair_centers_deg: tuple = (90.0, 210.0, 330.0)
+    plat_pair_centers_deg: tuple = (150.0, 270.0, 30.0)
 
     leg_middle: float = 0.740         # 中位腿长 (m)
     stroke: float = 0.192             # 电缸总行程 (m)
