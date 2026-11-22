@@ -99,6 +99,12 @@ G_chair_mujoco/
 - 这是**机构级**仿真：验证 IK/FK、闭环几何、行程、奇异、控制跟踪。
 - 未建模真实伺服的延迟/报警、丝杆间隙、鱼眼旷量、铝型材/座椅结构柔度、
   摩擦与负载扰动；这些需在实物上最终确认。
+- **关于"缸杆脱离底座"**：`check_gap.py` 实测 30s 视频驱动下 6 条缸的
+  tip↔plat 间隙 MAX 1.18mm / 平均 0.17mm，物理约束没有失效。视觉上像脱离，
+  是因为原模型底座只有一块平圆盘、没有铰点安装座。已在 `build_model.py` 里
+  给每个底座铰点加上球碗座（`socket_cup_*` / `socket_ball_*` 纯视觉 geom，
+  不影响动力学），重新 `python build_model.py` 生成 `model.xml` 即可。
+  若要看真实间隙数据：`./.venv/bin/python check_gap.py [compare_log.csv]`。
 - `--pipeline` 复用 `../G_chair_sim` 的遥测、姿态映射与滤波链，只把最后的
   IK 换成当前模型，用来看完整数据链在正确机构上的表现。
 - 查看器打不开时（远程/无显示），用 `--render` 离屏渲染；

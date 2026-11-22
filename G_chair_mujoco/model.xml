@@ -20,6 +20,18 @@
     <geom name="floor" type="plane" size="4 4 0.05" material="grid" contype="1" conaffinity="1"/>
     <body name="base_plate" pos="0 0 0">
       <geom name="base" type="cylinder" size="0.585 0.02" pos="0 0 -0.02" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_0" type="cylinder" size="0.038 0.014" pos="0.5282 -0.112272 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_0" type="sphere" size="0.030" pos="0.5282 -0.112272 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_1" type="cylinder" size="0.038 0.014" pos="0.5282 0.112272 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_1" type="sphere" size="0.030" pos="0.5282 0.112272 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_2" type="cylinder" size="0.038 0.014" pos="-0.166869 0.513571 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_2" type="sphere" size="0.030" pos="-0.166869 0.513571 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_3" type="cylinder" size="0.038 0.014" pos="-0.361331 0.401298 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_3" type="sphere" size="0.030" pos="-0.361331 0.401298 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_4" type="cylinder" size="0.038 0.014" pos="-0.361331 -0.401298 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_4" type="sphere" size="0.030" pos="-0.361331 -0.401298 -0.014" material="metal" contype="0" conaffinity="0"/>
+      <geom name="socket_cup_5" type="cylinder" size="0.038 0.014" pos="-0.166869 -0.513571 0.004" material="dark" contype="0" conaffinity="0"/>
+      <geom name="socket_ball_5" type="sphere" size="0.030" pos="-0.166869 -0.513571 -0.014" material="metal" contype="0" conaffinity="0"/>
     </body>
     <body name="platform" pos="0 0 0.66390329" quat="1 0 0 0">
       <freejoint name="platform_free"/>

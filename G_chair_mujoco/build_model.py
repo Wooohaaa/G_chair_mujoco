@@ -79,6 +79,14 @@ def build_xml(p: RigParams = PARAMS) -> str:
     a('    <body name="base_plate" pos="0 0 0">')
     a('      <geom name="base" type="cylinder" size="%.6g 0.02" pos="0 0 -0.02" '
       'material="dark" contype="0" conaffinity="0"/>' % base_r)
+    # 每个底座铰点加一个可见的球碗座：球头原本只是放在平圆盘上，
+    # 杆子一倾斜就像"从槽里翘出来"。加座后视觉上明确嵌在安装座里。
+    for i in range(6):
+        b = B[i]
+        a('      <geom name="socket_cup_%d" type="cylinder" size="0.038 0.014" '
+          'pos="%.6g %.6g 0.004" material="dark" contype="0" conaffinity="0"/>' % (i, b[0], b[1]))
+        a('      <geom name="socket_ball_%d" type="sphere" size="0.030" '
+          'pos="%.6g %.6g -0.014" material="metal" contype="0" conaffinity="0"/>' % (i, b[0], b[1]))
     a('    </body>')
 
     # ---------------- platform ----------------
