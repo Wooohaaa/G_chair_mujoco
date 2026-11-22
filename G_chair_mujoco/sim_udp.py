@@ -109,7 +109,8 @@ def run(args):
     sim = GChairSim()
     # 与实机桥接共用同一套映射管线；仿真只用其 .pose()，IK 交给 MuJoCo
     motion = MotionPipeline(accel_model=args.accel_model,
-                            lpf_tau=args.lpf, washout_tau=args.washout)
+                            lpf_tau=args.lpf, washout_tau=args.washout,
+                            max_speed=args.max_speed)
     print('[motion] %s (共用 motion_pipeline), lpf=%.2f, washout=%.2f' %
           ('加速度驱动(对称)' if args.accel_model else '原始FlyPT',
            args.lpf, args.washout))
@@ -237,6 +238,8 @@ def main():
                     help='加速度驱动映射 (roll<-accel_x, 左右对称; 默认开启)')
     ap.add_argument('--no-accel-model', dest='accel_model', action='store_false',
                     help='用原始 FlyPT PoseFromMotion 映射(可能左右不对称)')
+    ap.add_argument('--max-speed', type=float, default=110.0,
+                    help='最大缸速 mm/s (主控能力128, 默认110留余量; 0=不限速)')
     ap.add_argument('--wait', type=float, default=10.0, help='等待首帧的秒数')
     ap.add_argument('--stale', type=float, default=0.5, help='超过该秒数视为断流(回中位)')
     ap.add_argument('--ctrl-hz', type=float, default=50.0)

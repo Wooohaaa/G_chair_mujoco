@@ -26,6 +26,15 @@ FlyPT / 游戏遥测 ──> 6DOF 位姿 ──> 滤波 ──> 逆运动学 IK 
 默认用修好的"加速度驱动映射"（roll←accel_x，左右对称），可用 `--flypt`/`--no-accel-model`
 切回原始 FlyPT 映射对比。主控（Arduino/ESP32）是纯执行层，不参与映射，无需改动。
 
+### 缸速限制（保护主控/电机）
+
+`motion_pipeline.py` 内置 `speed_limiter.py` 的**自适应限速器**：默认最大缸速 **110mm/s**
+（主控硬件能力 128mm/s = `minPeriod 39µs → 25641Hz × 0.005mm/步`，留 14% 余量）。
+它在 IK **之前**回拉位姿（不是独立限速 6 缸，那会破坏几何），只削掉超标的尖峰、
+正常段零延迟。实测：峰值缸速 **1325 → 110mm/s，超主控能力帧 95 → 0**，
+左右对称性保持。`--max-speed 0` 可关闭。对比图见
+`G_chair_mujoco/output/real_gta5/speed_limit_compare.png`。
+
 ## 快速开始
 
 ```bash

@@ -97,7 +97,8 @@ def run(args):
 
     # 仿真/实机共用的映射管线（默认加速度驱动映射，--flypt 切回原链路）
     motion = MotionPipeline(accel_model=not args.flypt,
-                            lpf_tau=args.lpf, washout_tau=args.washout)
+                            lpf_tau=args.lpf, washout_tau=args.washout,
+                            max_speed=args.max_speed)
     print('[motion] %s, lpf=%.2f, washout=%.2f' %
           ('加速度驱动(对称)' if not args.flypt else '原FlyPT映射',
            args.lpf, args.washout))
@@ -165,6 +166,8 @@ def main():
                     help='用原始 FlyPT 映射(默认用修好的加速度驱动映射)')
     ap.add_argument('--lpf', type=float, default=0.15, help='遥测低通 tau 秒 (0=关)')
     ap.add_argument('--washout', type=float, default=2.5, help='洗出高通 tau 秒 (0=关)')
+    ap.add_argument('--max-speed', type=float, default=110.0,
+                    help='最大缸速 mm/s (主控能力128, 默认110; 0=不限速)')
     args = ap.parse_args()
     run(args)
 
