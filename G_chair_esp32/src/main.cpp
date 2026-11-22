@@ -188,13 +188,25 @@ void loop() {
 
     if (enabled && millis() - last_frame_ms > WATCHDOG_MS) go_neutral();
 
-    static unsigned long last_print = 0;
-    if (millis() - last_print > 1000) {
-        last_print = millis();
-        Serial.print("cur:");
-        for (int i = 0; i < NUM_AXES; i++) { Serial.print(axes[i].current); Serial.print(" "); }
-        Serial.print(" tgt:");
-        for (int i = 0; i < NUM_AXES; i++) { Serial.print(axes[i].target); Serial.print(" "); }
+    // 状态回传：每 50ms 发一帧文本，供调试面板实时显示。
+    // 格式: $cur0,cur1,...,cur5,tgt0,...,tgt5,limitMask,enabled,watchdog\n
+    //   cur/tgt 为步数(0~38400)；limitMask 6位， bit i=1 表示轴 i 限位触发；
+    //   enabled 0/1；watchdog 0/1 表示当前处于看门狗回中状态。
+    // 以 '$' 开头，与上位机发来的二进制指令帧 <255><255> 区分。
+    static unsigned long last_status = 0;
+    if (millis() - last_status >= 50) {
+        last_status = millis();
+        byte limitMask = 0;
+        for (int i = 0; i < NUM_AXES; i++) {
+            if (digitalRead(PIN_LIMIT[i]) == LOW) limitMask |= (1 << i);
+        }
+        byte wd = (enabled && (millis() - last_frame_ms > WATCHDOG_MS)) ? 1 : 0;
+        Serial.print('$');
+        for (int i = 0; i < NUM_AXES; i++) { Serial.print(axes[i].current); Serial.print(','); }
+        for (int i = 0; i < NUM_AXES; i++) { Serial.print(axes[i].target);  Serial.print(','); }
+        Serial.print(limitMask); Serial.print(',');
+        Serial.print(enabled ? 1 : 0); Serial.print(',');
+        Serial.print(wd);
         Serial.println();
     }
 }
