@@ -87,6 +87,29 @@ cd sim/G_chair_vision
     --source ../GTA5_drive_video.mp4 --csv video_telemetry.csv --duration 45
 ```
 
+## 真值数据集录制与分析（优化闭环）
+
+要客观评判视觉算法的改进，必须有【同一段驾驶的视频 + 真实遥测】对齐数据。
+采集卡插到仿真电脑上时，用下面两个工具形成闭环：
+
+**1. 录制**（游戏机没开时先跳过这步）：
+```bash
+python3 record_paired.py --list                    # 找出采集卡设备号
+python3 record_paired.py --video /dev/video2 \
+    --duration 60 --out /tmp/opencode/paired_run1  # 边录视频边抓UDP
+```
+产出：`paired_run1_video.mp4` + `paired_run1_telemetry.csv`（带 t 列，同钟对齐）+ `_meta.json`
+
+**2. 分析**（评判视觉推导 vs 真实遥测）：
+```bash
+python3 analyze_paired.py --vision video_telemetry.csv \
+    --truth /path/to/truth_telemetry.csv
+```
+输出每个通道的**相关系数、最佳延迟、幅度比**，自动指出最需改进的通道，并画对比曲线。
+优化目标：`rot_y` 相关系数从当前 ~0.05 提升到 >0.6，`accel_x` 幅度比从 2.65 降到 ~1.0。
+
+> 详细优化规划见 `OPTIMIZATION_PLAN.md`（含量化基线和五阶段方案）。
+
 ## 实时性能实测（2026-11）
 
 用 `benchmark.py` 在 PC 和立创泰山派（RK3566）上实测：
