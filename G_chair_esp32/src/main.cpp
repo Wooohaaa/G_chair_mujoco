@@ -37,8 +37,12 @@ static void set_period(Stepper &s, uint32_t period_us) {
     s.item.level0 = 1;  s.item.duration0 = high;
     s.item.level1 = 0;  s.item.duration1 = low;
     if (s.running) {
-        // 等 RMT 把新 symbol 加载完再返回，避免 DMA 尚未读取就被下次修改导致波形错乱
-        rmt_write_items(s.chan, &s.item, 1, true);
+        // 修 P0-1：loop 模式下 wait_tx_done=true 会等到"所有 item 发完"，
+        // 而 loop_en=无限循环永远不会满足 -> 卡死。正确做法（参考 Arduino rmtWriteLooping）：
+        // 先停 -> 用 wait=false 重新加载 -> 重启循环。
+        rmt_tx_stop(s.chan);
+        rmt_write_items(s.chan, &s.item, 1, false);
+        rmt_tx_start(s.chan, true);   // true = loop 模式
     }
 }
 
@@ -67,7 +71,9 @@ static void rmt_init_axis(int i) {
 }
 
 static void rmt_start(Stepper &s) {
-    rmt_write_items(s.chan, &s.item, 1, true);    // 等加载完成；loop_en 自动循环
+    // 同样用 wait=false（非阻塞），显式以 loop 模式启动，避免 loop 模式下 wait=true 的死锁。
+    rmt_write_items(s.chan, &s.item, 1, false);
+    rmt_tx_start(s.chan, true);
     s.running = true;
 }
 
