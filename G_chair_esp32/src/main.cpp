@@ -198,6 +198,9 @@ void setup() {
 
 // 文本命令（调试用，'#' 开头，与二进制帧和 '$' 状态帧区分）
 static String cmd_buf;
+static bool selftest_active = false;
+static int selftest_axis = 0, selftest_phase = 0;
+static unsigned long selftest_t = 0;
 static void handle_text_cmd(const String &c) {
     if (c == "#H") {
         Serial.println("CMD: #T=selftest  #N=neutral  #E=enable  #D=disable");
@@ -213,15 +216,36 @@ static void handle_text_cmd(const String &c) {
         for (int i = 0; i < NUM_AXES; i++) rmt_stop(axes[i]);
         Serial.println("OK disable");
     } else if (c == "#T") {
-        // 自检：逐轴点动 +300 步(1.5mm) 再回中，空载时用示波器/电机声验证
+        // 启动非阻塞自检状态机（不能用 delay —— 期间 update_axis 不跑，脉冲发不出去）
         enable_drivers(true); enabled = true;
-        for (int i = 0; i < NUM_AXES; i++) {
-            move_axis(i, CENTER_POS_STEPS + 300);
-            delay(120);
-            move_axis(i, CENTER_POS_STEPS);
-            delay(120);
+        selftest_active = true;
+        selftest_axis = 0;
+        selftest_phase = 0;
+        selftest_t = millis();
+        move_axis(0, CENTER_POS_STEPS + 300);
+        Serial.println("OK selftest started (non-blocking)");
+    }
+}
+
+// 自检状态机：每轴 300ms 伸出 +300 步，再 300ms 回中，逐轴进行。
+// 在 loop() 里调用，保证 update_axis 持续运行、脉冲真正发出。
+static void selftest_loop() {
+    if (!selftest_active) return;
+    unsigned long now = millis();
+    if (now - selftest_t < 300) return;
+    selftest_t = now;
+    if (selftest_phase == 0) {
+        move_axis(selftest_axis, CENTER_POS_STEPS);   // 回中
+        selftest_phase = 1;
+    } else {
+        selftest_axis++;
+        if (selftest_axis >= NUM_AXES) {
+            selftest_active = false;
+            Serial.println("OK selftest done");
+        } else {
+            move_axis(selftest_axis, CENTER_POS_STEPS + 300);
+            selftest_phase = 0;
         }
-        Serial.println("OK selftest 6 axes done");
     }
 }
 
@@ -269,7 +293,10 @@ void loop() {
         last_tick = now;
     }
 
-    if (enabled && millis() - last_frame_ms > WATCHDOG_MS) go_neutral();
+    selftest_loop();   // 非阻塞自检（保证 update_axis 持续运行）
+
+    // 自检期间跳过看门狗（自检本身不依赖上位机帧）
+    if (!selftest_active && enabled && millis() - last_frame_ms > WATCHDOG_MS) go_neutral();
 
     // 状态回传：每 50ms 发一帧文本，供调试面板实时显示。
     // 格式: $cur0,cur1,...,cur5,tgt0,...,tgt5,limitMask,enabled,watchdog\n
