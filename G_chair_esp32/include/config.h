@@ -33,6 +33,11 @@ static const uint8_t PIN_LIMIT[NUM_AXES] = { 13, 14, 21, 47, 48, 38 };
 #define WATCHDOG_MS         500         // 超过该时间无有效帧 -> 回中位
 #define HOMING_SPEED_US     200         // 回中位时的脉冲周期 (越快周期越小)
 
+// 可选：软件急停 GPIO（画板时预留）。默认关闭，避免未接线时误触发。
+// 启用: platformio.ini 加 -DUSE_ESTOP_GPIO；急停按钮常闭，按下拉低此脚。
+#define PIN_ESTOP           2
+#define ESTOP_ACTIVE_LOW    1
+
 // ==================== 伺服品牌 DB25 引脚定义（按工程网口线序图.pdf）====================
 // 不同品牌伺服的 DB25 针脚不同。新板的 RJ45 线序统一， But 若用 DB25 直连
 // 需按品牌接线。下面列出工程中已知的三种，供画板/接线时对照。

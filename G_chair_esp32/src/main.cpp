@@ -184,6 +184,9 @@ void setup() {
         pinMode(PIN_LIMIT[i], INPUT_PULLUP);
         rmt_init_axis(i);
     }
+#ifdef USE_ESTOP_GPIO
+    pinMode(PIN_ESTOP, INPUT_PULLUP);
+#endif
 #ifdef USE_WIFI
     wifi_setup();
     Serial.println("ESP32-S3 6-axis (WiFi UDP) ready");
@@ -200,6 +203,16 @@ void loop() {
     // 限制每循环解析字节数，避免串口满速灌入时长时间阻塞限位检测/脉冲更新
     int max_bytes = 32;
     while (Serial.available() && max_bytes-- > 0) parse_byte((uint8_t)Serial.read());
+#endif
+
+#ifdef USE_ESTOP_GPIO
+    // 软件急停（双保险）：触发时禁止使能并停全部轴。
+    // 主保护仍是硬件常闭按钮切 24V；这里是第二道防线。
+    if (digitalRead(PIN_ESTOP) == LOW) {
+        enable_drivers(false);
+        enabled = false;
+        for (int i = 0; i < NUM_AXES; i++) rmt_stop(axes[i]);
+    }
 #endif
 
     // 限位触发: 立即停该轴
@@ -238,6 +251,9 @@ void loop() {
         Serial.print(limitMask); Serial.print(',');
         Serial.print(enabled ? 1 : 0); Serial.print(',');
         Serial.print(wd);
+#ifdef USE_ESTOP_GPIO
+        Serial.print(','); Serial.print(digitalRead(PIN_ESTOP) == LOW ? 1 : 0);
+#endif
         Serial.println();
     }
 }
