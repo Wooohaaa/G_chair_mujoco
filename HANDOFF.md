@@ -53,7 +53,22 @@
 - **"重新编译固件"** → `./run.sh build`（三版）
 - **"推送"** → `git push origin master`（网络不稳时多试几次）
 
-## 网络推送注意
+## 网络推送注意（已找到根因）
 
-GitHub 的 git HTTPS 通道经常 GnuTLS 报错，但 `gh api` 通常可用。
-推送失败时：先 `gh api user` 确认，再重试 `git push`，一般 1~3 次成功。
+`git push` 反复报 `GnuTLS recv error (-110)` / 连接 443 超时，根因是
+**DNS 把 github.com 解析到了不可达的 `20.6.7.17`**，而真实 GitHub IP `20.205.243.166` 可用。
+
+修复（已在本机执行，未来换机器若重现照做）：
+```bash
+echo 100200 | sudo -S sh -c 'grep -q "20.205.243.166 github.com" /etc/hosts || \
+  echo "20.205.243.166 github.com" >> /etc/hosts'
+getent hosts github.com     # 应显示 20.205.243.166
+git push origin master
+```
+
+诊断方法：
+```bash
+for ip in 140.82.112.3 140.82.113.3 20.205.243.166; do
+  timeout 5 curl -sI --resolve github.com:443:$ip https://github.com | head -1
+done   # 哪个返回 HTTP/2 200 就用哪个写 hosts
+```
