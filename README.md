@@ -1,7 +1,10 @@
-# G_chair 六轴 Stewart 平台 · MuJoCo 仿真
+# G_chair 六轴 Stewart 平台 · 仿真与实机控制
+
+> 🗺️ **系统总览（先看这个）**：`SYSTEM_OVERVIEW.md` —— 整个工程的地图、快速开始、文档索引。
+> 🚀 **一键启动**：`./run.sh --help`
 
 用 MuJoCo 验证 6-DOF Stewart 平台的运动学、闭环机构、行程、奇异位形与控制跟踪，
-不接触实物即可跑通整条数据链。
+并用同一套算法驱动真实的 ESP32-S3 主控（替代原两块 Mega2560）。
 
 ```
 FlyPT / 游戏遥测 ──> 6DOF 位姿 ──> 滤波 ──> 逆运动学 IK ──> 6 缸位移 ──> MuJoCo 闭环平台
