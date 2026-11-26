@@ -43,6 +43,8 @@
 
 ## 如果用户的下一个请求是……
 
+- **"验证系统是否正常"** → `./run.sh verify`（一条命令输出全部证据）
+- **"体感参数怎么调"** → 录制一段（`host_app` Web 界面）后 `./run.sh analyze output/host_app_log.csv`
 - **"继续完善"** → 看 `STATUS.md` 第四节"下一步优先级"，实物测试是最高优先
 - **"实机不动"** → 看 `G_chair_esp32/POWERON_CHECKLIST.md` 第9节常见问题：共地、电平、ENA极性
 - **"看效果"** → `./run.sh host-sim --mock`，浏览器 localhost:8765
