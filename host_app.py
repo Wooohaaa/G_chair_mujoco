@@ -256,7 +256,25 @@ async def main_async(args):
         sim = GChairSim()
         print('[mode] 仿真 (MuJoCo)')
 
-    if args.mock:
+    if args.replay:
+        # 从 raw_telemetry.csv 回放真实遥测（25通道），按 50Hz 发到 UDP
+        def replay_loop():
+            import csv
+            path = args.replay
+            with open(path) as fh:
+                rows = list(csv.DictReader(fh))
+            print('[replay] %s (%d 帧)' % (path, len(rows)), flush=True)
+            while True:
+                for row in rows:
+                    payload = ' '.join('%.4f' % float(row.get(k, 0.0))
+                                       for k in TELEMETRY_CHANNELS)
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.sendto(payload.encode(), ('127.0.0.1', args.udp_port))
+                    s.close()
+                    time.sleep(0.02)
+        threading.Thread(target=replay_loop, daemon=True).start()
+
+    elif args.mock:
         # 用测试发送端，本机自环
         from G_chair_sim.udp_sender_test import make_frame
         def mock_loop():
@@ -315,6 +333,8 @@ def main():
     ap.add_argument('--washout', type=float, default=2.5)
     ap.add_argument('--max-speed', type=float, default=110.0)
     ap.add_argument('--mock', action='store_true', help='本机合成遥测(无游戏机)')
+    ap.add_argument('--replay', default=None,
+                    help='从 raw_telemetry.csv 回放真实遥测(循环)')
     args = ap.parse_args()
     asyncio.run(main_async(args))
 

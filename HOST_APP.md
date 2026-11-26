@@ -21,6 +21,7 @@ cd sim
 | `--serial` | 自动检测 | 实机串口 |
 | `--port` | 8765 | Web HTTP 端口 |
 | `--mock` | 关 | 本机合成遥测（无游戏机时验证用） |
+| `--replay` | 无 | 从 `raw_telemetry.csv` 循环回放真实遥测，用于反复对比参数 |
 
 ## Web 界面功能
 
@@ -57,6 +58,8 @@ GTA5 mod → UDP 25浮点 :4124 → UdpTelemetryReceiver
 | 数据流 | 帧数持续增长，断流帧 1（启动瞬间） |
 | 在线调参 | lpf 0.15→0.3、washout 2.5→3.5、max_speed 110→90 全部实时生效 |
 | 录制 | 保存 15 行到 `output/host_app_log.csv`，状态正确复位 False |
+| 在线增益 | roll 35→50、pitch 30→45、yaw 10→20、sway 100→150 实时生效 |
+| 回放 | `--replay raw_telemetry.csv` 循环回放，帧数持续增长（144→520）、峰值位移 15.3mm、断流 2 |
 
 ## 与旧脚本的关系
 
