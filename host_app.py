@@ -316,6 +316,40 @@ async def main_async(args):
     await asyncio.gather(http_server.wait_closed(), ws_server.wait_closed())
 
 
+def self_check(args):
+    """启动自检：依赖/映射/换算/帧格式，打印健康状态。"""
+    print('===== 上位机自检 =====')
+    ok = True
+    try:
+        from motion_pipeline import MotionPipeline
+        m = MotionPipeline()
+        tele = {'accel_x': 0.5, 'accel_z': 0.3, 'accel_y': 0.1,
+                'rot_y': 0.4, 'rot_x': 0.0, 'rot_z': 0.0}
+        peak = 0.0
+        for k in range(60):
+            t = dict(tele); t['accel_x'] = 0.6 * np.sin(k * 0.1)
+            _, d = m.pose_and_disp(t, 0.02)
+            peak = max(peak, np.max(np.abs(d)))
+        good = np.all(np.isfinite(d)) and peak <= 95 and peak > 1.0
+        print('  映射管线: %s (变化输入峰值位移 %.1fmm)' % ('OK' if good else 'FAIL', peak))
+        ok &= good
+    except Exception as e:
+        print('  映射管线: FAIL (%s)' % e); ok = False
+    try:
+        frame = build_frame([0] * 6)
+        good = len(frame) == 14 and frame[0] == 255 and frame[1] == 255
+        print('  指令帧: %s (14字节 FF FF 头)' % ('OK' if good else 'FAIL'))
+        ok &= good
+    except Exception as e:
+        print('  指令帧: FAIL (%s)' % e); ok = False
+    if args.mode == 'real':
+        ports = sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*') +
+                       glob.glob('/dev/cu.usbmodem*'))
+        print('  串口设备: %s' % (ports if ports else '未检测到（实机请检查接线）'))
+    print('======================')
+    return ok
+
+
 def main():
     ap = argparse.ArgumentParser(description='G_chair 一键上位机')
     ap.add_argument('--mode', choices=['real', 'sim'], default='sim')
@@ -335,8 +369,13 @@ def main():
     ap.add_argument('--mock', action='store_true', help='本机合成遥测(无游戏机)')
     ap.add_argument('--replay', default=None,
                     help='从 raw_telemetry.csv 回放真实遥测(循环)')
+    ap.add_argument('--check', action='store_true', help='只做启动自检后退出')
     args = ap.parse_args()
-    asyncio.run(main_async(args))
+    if args.check:
+        self_check(args)
+    else:
+        self_check(args)
+        asyncio.run(main_async(args))
 
 
 if __name__ == '__main__':
