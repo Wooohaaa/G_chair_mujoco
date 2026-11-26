@@ -202,8 +202,9 @@ def save_log():
     out_dir = os.path.join(HERE, 'output')
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, 'host_app_log.csv')
-    header = 't,' + ','.join('leg%d' % i for i in range(6)) + \
-             ',' + ','.join('pose%d' % i for i in range(6)) + ',speed0..5'
+    header = (','.join(['t'] + ['leg%d' % i for i in range(6)] +
+                       ['pose%d' % i for i in range(6)] +
+                       ['speed%d' % i for i in range(6)]))
     np.savetxt(path, np.array(_rec_log), delimiter=',', header=header, comments='')
     print('[record] %s (%d rows)' % (path, len(_rec_log)))
 

@@ -12,7 +12,8 @@ usage() {
   echo "  host-wifi    启动上位机(实机模式，WiFi UDP)"
   echo "  panel        启动独立调试面板(手动姿态测试)"
   echo "  test         运行全链路回归测试(19项)"
-  echo "  test-robust  运行健壮性测试(12项: 断流/异常/边界/长跑)"
+  echo "  test-robust  运行健壮性测试(12项: 断流/异常/边界/长跑)
+  analyze      分析录制的运行日志, 给调参建议 ($2=csv路径)"
   echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
   echo "  validate     运行 MuJoCo 静态校验"
   echo "  simulate     用真实视频录制 MuJoCo 对比视频"
@@ -44,6 +45,9 @@ case "$CMD" in
     ;;
   test-robust)
     exec "$PY" "$HERE/tests/test_robustness.py"
+    ;;
+  analyze)
+    exec "$PY" "$HERE/tools/analyze_run.py" "${1:-}"
     ;;
   build)
     PIO="$HERE/G_chair_mujoco/.venv/bin/pio"

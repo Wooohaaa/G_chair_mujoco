@@ -62,6 +62,19 @@ GTA5 mod → UDP 25浮点 :4124 → UdpTelemetryReceiver
 | 在线增益 | roll 35→50、pitch 30→45、yaw 10→20、sway 100→150 实时生效 |
 | 回放 | `--replay raw_telemetry.csv` 循环回放，帧数持续增长（144→520）、峰值位移 15.3mm、断流 2 |
 
+## 运行日志分析（调参助手）
+
+录制的 CSV 可以用分析工具量化评估，并给出具体调参建议：
+
+```bash
+./run.sh analyze output/host_app_log.csv
+```
+
+输出：行程占用/超程、缸速分布与限速帧、体感幅度（roll/pitch/yaw 峰值）、
+左右对称性、以及"该加/减哪个增益"的建议。
+实测 8 秒回放日志：400 帧、50Hz、缸速 P99=106mm/s（未顶限速）、
+roll 峰值 1.33° → 建议加大 roll 增益。
+
 ## 与旧脚本的关系
 
 | 旧脚本 | 现在 |
