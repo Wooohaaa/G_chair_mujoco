@@ -68,13 +68,34 @@ class MotionPipeline:
                                                    dt=SIM['dt'])
                               if max_speed > 0 else None)
 
+    @staticmethod
+    def _sanitize(tele):
+        """净化遥测：NaN/Inf/非数值 → 0.0，并钳位到合理范围。
+
+        一帧异常数据若进入低通/洗出状态，会永久污染后续所有输出（实机安全隐患）。
+        这里在入口处拦截，保证滤波器状态始终是有限值。
+        """
+        out = {}
+        limits = {'accel_x': 20.0, 'accel_z': 20.0, 'accel_y': 20.0,
+                  'rot_x': 20.0, 'rot_y': 20.0, 'rot_z': 20.0}
+        for k, lim in limits.items():
+            try:
+                x = float(tele.get(k, 0.0))
+            except (TypeError, ValueError):
+                x = 0.0
+            if not np.isfinite(x):
+                x = 0.0
+            out[k] = float(np.clip(x, -lim, lim))
+        return out
+
     def _lowpass(self, tele, dt):
+        tele = self._sanitize(tele)   # 先净化，避免异常值污染状态
         if self.lpf_tau <= 0:
             return tele
         a = dt / (self.lpf_tau + dt)
         out = dict(tele)
         for k in self._lp:
-            x = float(tele.get(k, 0.0))
+            x = tele[k]
             if not self._lp_init:
                 self._lp[k] = x
             else:

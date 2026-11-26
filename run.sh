@@ -11,8 +11,9 @@ usage() {
   echo "  host-real    启动上位机(实机模式，USB串口)"
   echo "  host-wifi    启动上位机(实机模式，WiFi UDP)"
   echo "  panel        启动独立调试面板(手动姿态测试)"
-  echo "  test         运行全链路回归测试"
-  echo "  build        编译 ESP32 固件(串口版 + WiFi版)"
+  echo "  test         运行全链路回归测试(19项)"
+  echo "  test-robust  运行健壮性测试(12项: 断流/异常/边界/长跑)"
+  echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
   echo "  validate     运行 MuJoCo 静态校验"
   echo "  simulate     用真实视频录制 MuJoCo 对比视频"
   echo ""
@@ -41,9 +42,12 @@ case "$CMD" in
   test)
     exec "$PY" "$HERE/tests/test_chain.py"
     ;;
+  test-robust)
+    exec "$PY" "$HERE/tests/test_robustness.py"
+    ;;
   build)
     PIO="$HERE/G_chair_mujoco/.venv/bin/pio"
-    (cd "$HERE/G_chair_esp32" && "$PIO" run && "$PIO" run -e esp32-s3-wifi)
+    (cd "$HERE/G_chair_esp32" && "$PIO" run && "$PIO" run -e esp32-s3-wifi && "$PIO" run -e esp32-s3-estop)
     ;;
   validate)
     (cd "$HERE/G_chair_mujoco" && "$PY" sim.py --validate)
