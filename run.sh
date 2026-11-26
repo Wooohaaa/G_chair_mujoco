@@ -49,7 +49,7 @@ case "$CMD" in
     exec "$PY" "$HERE/tests/test_robustness.py"
     ;;
   analyze)
-    exec "$PY" "$HERE/tools/analyze_run.py" "${1:-}"
+    exec "$PY" "$HERE/tools/analyze_run.py" "$@"
     ;;
   verify)
     echo "===== 全量验证 ====="
