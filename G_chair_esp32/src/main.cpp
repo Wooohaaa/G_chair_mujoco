@@ -196,13 +196,52 @@ void setup() {
     last_frame_ms = millis();
 }
 
+// 文本命令（调试用，'#' 开头，与二进制帧和 '$' 状态帧区分）
+static String cmd_buf;
+static void handle_text_cmd(const String &c) {
+    if (c == "#H") {
+        Serial.println("CMD: #T=selftest  #N=neutral  #E=enable  #D=disable");
+    } else if (c == "#N") {
+        enable_drivers(true); enabled = true;
+        go_neutral();
+        Serial.println("OK neutral");
+    } else if (c == "#E") {
+        enable_drivers(true); enabled = true;
+        Serial.println("OK enable");
+    } else if (c == "#D") {
+        enable_drivers(false); enabled = false;
+        for (int i = 0; i < NUM_AXES; i++) rmt_stop(axes[i]);
+        Serial.println("OK disable");
+    } else if (c == "#T") {
+        // 自检：逐轴点动 +300 步(1.5mm) 再回中，空载时用示波器/电机声验证
+        enable_drivers(true); enabled = true;
+        for (int i = 0; i < NUM_AXES; i++) {
+            move_axis(i, CENTER_POS_STEPS + 300);
+            delay(120);
+            move_axis(i, CENTER_POS_STEPS);
+            delay(120);
+        }
+        Serial.println("OK selftest 6 axes done");
+    }
+}
+
 void loop() {
 #ifdef USE_WIFI
     wifi_loop();
 #else
     // 限制每循环解析字节数，避免串口满速灌入时长时间阻塞限位检测/脉冲更新
     int max_bytes = 32;
-    while (Serial.available() && max_bytes-- > 0) parse_byte((uint8_t)Serial.read());
+    while (Serial.available() && max_bytes-- > 0) {
+        uint8_t b = (uint8_t)Serial.read();
+        if (b == '#') {
+            cmd_buf = "";
+            while (Serial.available()) cmd_buf += (char)Serial.read();
+            cmd_buf.trim();
+            handle_text_cmd(cmd_buf);
+            continue;
+        }
+        parse_byte(b);
+    }
 #endif
 
 #ifdef USE_ESTOP_GPIO
