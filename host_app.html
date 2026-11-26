@@ -24,6 +24,7 @@
 </head>
 <body>
 <h1>🎛️ G_chair 上位机 — 实时监控 / 在线调参</h1>
+<div id="alarm" style="display:none;background:#7f1d1d;color:#fff;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-weight:bold"></div>
 <div id="top" class="card"></div>
 
 <div class="row">
@@ -97,6 +98,15 @@ function sendParamDirect(){
 });
 
 function update(s){
+  // 醒目的安全告警条
+  const alarm=document.getElementById('alarm');
+  const lim=s.hw.limit||0, wd=s.hw.watchdog||0, lost=s.lost||0;
+  let msgs=[];
+  if(wd) msgs.push('⚠ 看门狗触发：平台回中位');
+  if(lim) msgs.push('⛔ 限位触发：轴 '+[0,1,2,3,4,5].filter(i=>(lim>>i)&1).join(','));
+  if(lost>20) msgs.push('⚠ 遥测断流 '+lost+' 帧（请检查游戏机/网络）');
+  if(msgs.length){ alarm.style.display='block'; alarm.textContent=msgs.join(' | '); }
+  else { alarm.style.display='none'; }
   document.getElementById('top').innerHTML =
     '<b>模式:</b> '+s.mode+' &nbsp; <b>帧数:</b> '+s.frames+' &nbsp; <b>断流帧:</b> '+s.lost+
     ' &nbsp; <b>串口:</b> '+(s.connected?'已连接':'未连接')+
