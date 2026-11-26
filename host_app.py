@@ -176,8 +176,10 @@ async def ws_handler(websocket):
             cmd = d.get('cmd')
             if cmd == 'param':
                 with _state_lock:
+                    gains = {k: d[k] for k in ('roll', 'pitch', 'yaw', 'sway',
+                                               'surge', 'heave') if k in d}
                     p = motion_ref.set_params(lpf=d.get('lpf'), washout=d.get('washout'),
-                                              max_speed=d.get('max_speed'))
+                                              max_speed=d.get('max_speed'), gains=gains)
                     state['params'] = p
             elif cmd == 'record_start':
                 _rec_log.clear()

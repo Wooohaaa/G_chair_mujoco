@@ -30,7 +30,7 @@ for p in (MJ_DIR, SIM_DIR):
 from config import SIM, FILTERS
 from params import PARAMS
 from gchair_kin import make_rig
-from motion_map import accel_driven_pose, Washout6D
+from motion_map import accel_driven_pose, Washout6D, Gains
 from pose_from_motion import PoseFromMotion
 from filters import FilterChain
 from speed_limiter import AdaptiveSpeedLimiter
@@ -49,6 +49,7 @@ class MotionPipeline:
         self.lpf_tau = lpf_tau
         self.washout_tau = washout_tau
         self.max_speed = max_speed
+        self.gains = Gains()       # 在线可调增益（默认与原实现一致）
         self.speed_limiter = None  # 在 rig 建好后初始化
 
         # 低通状态
@@ -91,7 +92,7 @@ class MotionPipeline:
         """
         tele = self._lowpass(tele, dt)
         if self.accel_model:
-            p = accel_driven_pose(tele, dt, self.wo)
+            p = accel_driven_pose(tele, dt, self.wo, self.gains)
         else:
             pf = self.mapper.apply_filters(self.mapper.compute(tele, dt), self.filt, dt)
             p = np.array([pf['sway']/1000.0, pf['surge']/1000.0, pf['heave']/1000.0,
@@ -120,8 +121,8 @@ class MotionPipeline:
         disp = np.clip(disp, -PARAMS.range * 1000.0, PARAMS.range * 1000.0)
         return pose, disp
 
-    def set_params(self, lpf=None, washout=None, max_speed=None):
-        """运行时调整滤波/限速参数（供上位机 Web 界面在线调参）。"""
+    def set_params(self, lpf=None, washout=None, max_speed=None, gains=None):
+        """运行时调整滤波/限速/增益参数（供上位机 Web 界面在线调参）。"""
         if lpf is not None:
             self.lpf_tau = max(0.0, float(lpf))
         if washout is not None:
@@ -140,11 +141,17 @@ class MotionPipeline:
                     self.speed_limiter.max_speed = v
             else:
                 self.speed_limiter = None
+        if gains:
+            for k, v in gains.items():
+                if hasattr(self.gains, k):
+                    setattr(self.gains, k, float(v))
         return self.get_params()
 
     def get_params(self):
-        return {'lpf': self.lpf_tau, 'washout': self.washout_tau,
-                'max_speed': self.max_speed, 'accel_model': self.accel_model}
+        p = {'lpf': self.lpf_tau, 'washout': self.washout_tau,
+             'max_speed': self.max_speed, 'accel_model': self.accel_model}
+        p.update(self.gains.to_dict())
+        return p
 
     def reset(self):
         """断流后重置状态（低通/洗出/限速器回到初始），避免残留偏置。"""

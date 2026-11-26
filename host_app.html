@@ -40,6 +40,11 @@
     <div class="pr"><label>低通 tau (s)</label><input type="range" id="lpf" min="0" max="0.6" step="0.01" value="0.15"><span class="val" id="lpfv">0.15</span></div>
     <div class="pr"><label>洗出 tau (s)</label><input type="range" id="wash" min="0" max="8" step="0.1" value="2.5"><span class="val" id="washv">2.5</span></div>
     <div class="pr"><label>最大缸速 mm/s</label><input type="range" id="spd" min="0" max="128" step="1" value="110"><span class="val" id="spdv">110</span></div>
+    <div style="border-top:1px solid #2a303a;margin-top:8px;padding-top:6px;font-size:11px;color:#9aa0aa">体感增益</div>
+    <div class="pr"><label>侧倾 roll</label><input type="range" id="groll" min="0" max="60" step="1" value="35"><span class="val" id="grollv">35</span></div>
+    <div class="pr"><label>俯仰 pitch</label><input type="range" id="gpitch" min="0" max="60" step="1" value="30"><span class="val" id="gpitchv">30</span></div>
+    <div class="pr"><label>偏航 yaw</label><input type="range" id="gyaw" min="0" max="30" step="0.5" value="10"><span class="val" id="gyawv">10</span></div>
+    <div class="pr"><label>横移 sway</label><input type="range" id="gsway" min="0" max="200" step="5" value="100"><span class="val" id="gswayv">100</span></div>
     <button onclick="applyParams()">应用参数</button>
     <button onclick="sendParamDirect()">滑块即时应用</button>
     <div class="legend">主控硬件上限 128mm/s；默认 110 留余量<br>断流自动回中位并重置滤波状态</div>
@@ -72,12 +77,20 @@ function sendParamDirect(){
   const lpf=parseFloat(document.getElementById('lpf').value);
   const wash=parseFloat(document.getElementById('wash').value);
   const spd=parseFloat(document.getElementById('spd').value);
-  cmd('param',{lpf,washout:wash,max_speed:spd});
+  const gains={roll:parseFloat(document.getElementById('groll').value),
+               pitch:parseFloat(document.getElementById('gpitch').value),
+               yaw:parseFloat(document.getElementById('gyaw').value),
+               sway:parseFloat(document.getElementById('gsway').value)};
+  cmd('param',Object.assign({lpf,washout:wash,max_speed:spd},gains));
   document.getElementById('lpfv').textContent=lpf.toFixed(2);
   document.getElementById('washv').textContent=wash.toFixed(1);
   document.getElementById('spdv').textContent=spd.toFixed(0);
+  document.getElementById('grollv').textContent=gains.roll.toFixed(0);
+  document.getElementById('gpitchv').textContent=gains.pitch.toFixed(0);
+  document.getElementById('gyawv').textContent=gains.yaw.toFixed(1);
+  document.getElementById('gswayv').textContent=gains.sway.toFixed(0);
 }
-['lpf','wash','spd'].forEach(id=>{
+['lpf','wash','spd','groll','gpitch','gyaw','gsway'].forEach(id=>{
   document.getElementById(id).addEventListener('input',()=>{
     document.getElementById(id+'v').textContent=document.getElementById(id).value;
   });
@@ -110,6 +123,12 @@ function update(s){
     document.getElementById('lpfv').textContent=s.params.lpf.toFixed(2);
     document.getElementById('washv').textContent=s.params.washout.toFixed(1);
     document.getElementById('spdv').textContent=s.params.max_speed.toFixed(0);
+    if(s.params.roll!==undefined){
+      document.getElementById('grollv').textContent=s.params.roll.toFixed(0);
+      document.getElementById('gpitchv').textContent=s.params.pitch.toFixed(0);
+      document.getElementById('gyawv').textContent=s.params.yaw.toFixed(1);
+      document.getElementById('gswayv').textContent=s.params.sway.toFixed(0);
+    }
   }
 }
 function draw(){
