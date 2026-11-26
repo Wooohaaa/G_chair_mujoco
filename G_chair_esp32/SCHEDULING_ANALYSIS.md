@@ -1,8 +1,16 @@
 # ESP32-S3 单板调度可行性分析（是否要 RTOS）
 
-> 结论先行：**当前单 loop 架构基本可行，不需要上 FreeRTOS 多任务**，
-> 但有 **2 个必须在上真实电机前修掉的阻塞点**，以及 3 个建议改进项。
+> 结论先行：**当前单 loop 架构基本可行，不需要上 FreeRTOS 多任务**。
 > Arduino-ESP32 底层本来就是 FreeRTOS，问题不在"有没有 RTOS"，而在"当前代码有没有被阻塞"。
+>
+> **更新（2026-11-26）**：本文指出的阻塞点已在后续修复中处理——
+> - P0-1（loop 模式 wait_tx_done=true 死锁）：已改为 `rmt_tx_stop` → 改 item →
+>   `rmt_write_items(false)` → `rmt_tx_start(true)`，见 `src/main.cpp:42-49,76-81`。
+> - P0-2（RMT 脉冲与软件 current 脱节）：方案 3 已实施——每循环限制解析 32 字节、
+>   状态回传改为 snprintf 一次 `Serial.write`，loop 稳定在 <1ms，`dt/period` 估算误差 <1 脉冲。
+> - P1-2（状态回传非阻塞）：已用 snprintf 到 buffer 一次写入替代多次 `Serial.print`。
+>
+> 下方问题分析保留作原理说明；当前代码状态以上述更新为准。
 
 ---
 

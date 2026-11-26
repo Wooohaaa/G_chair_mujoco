@@ -245,15 +245,20 @@ void loop() {
             if (digitalRead(PIN_LIMIT[i]) == LOW) limitMask |= (1 << i);
         }
         byte wd = (enabled && (millis() - last_frame_ms > WATCHDOG_MS)) ? 1 : 0;
-        Serial.print('$');
-        for (int i = 0; i < NUM_AXES; i++) { Serial.print(axes[i].current); Serial.print(','); }
-        for (int i = 0; i < NUM_AXES; i++) { Serial.print(axes[i].target);  Serial.print(','); }
-        Serial.print(limitMask); Serial.print(',');
-        Serial.print(enabled ? 1 : 0); Serial.print(',');
-        Serial.print(wd);
+        // 一次写入，避免多次 Serial.print 造成 loop 阻塞（P0-2：保持脉冲计数准确）
+        char buf[160];
+        int n = snprintf(buf, sizeof(buf), "$%ld,%ld,%ld,%ld,%ld,%ld,"
+                         "%ld,%ld,%ld,%ld,%ld,%ld,%u,%u,%u",
+                         axes[0].current, axes[1].current, axes[2].current,
+                         axes[3].current, axes[4].current, axes[5].current,
+                         axes[0].target,  axes[1].target,  axes[2].target,
+                         axes[3].target,  axes[4].target,  axes[5].target,
+                         limitMask, (unsigned)(enabled ? 1 : 0), (unsigned)wd);
 #ifdef USE_ESTOP_GPIO
-        Serial.print(','); Serial.print(digitalRead(PIN_ESTOP) == LOW ? 1 : 0);
+        n += snprintf(buf + n, sizeof(buf) - n, ",%u",
+                      (unsigned)(digitalRead(PIN_ESTOP) == LOW ? 1 : 0));
 #endif
-        Serial.println();
+        buf[n++] = '\n';
+        Serial.write(buf, n);
     }
 }
