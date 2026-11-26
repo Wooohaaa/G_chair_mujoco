@@ -59,6 +59,7 @@ def zero_telemetry():
 
 # ---------------- 串口输出 + 状态回传 ----------------
 ser = None
+wifi_sock = None
 _rx_buf = b''
 
 
@@ -123,7 +124,9 @@ def pipeline_loop(args, motion, rx, sim):
         pose, disp = motion.pose_and_disp(tele, DT)
         lim = np.clip(disp, -95, 95)
 
-        if args.mode == 'real' and ser and ser.is_open:
+        if args.mode == 'real' and args.output == 'wifi' and wifi_sock is not None:
+            wifi_sock.sendto(build_frame(lim), (args.esp32_ip, args.esp32_udp))
+        elif args.mode == 'real' and ser and ser.is_open:
             ser.write(build_frame(lim))
         elif sim is not None:
             sim.command_displacement(lim, DT)
@@ -233,8 +236,12 @@ HTTP_PORT = 8765
 
 
 async def main_async(args):
-    global ser, motion_ref, HTTP_PORT
+    global ser, wifi_sock, motion_ref, HTTP_PORT
     HTTP_PORT = args.port
+
+    if args.output == 'wifi':
+        wifi_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        print('[wifi] 输出到 udp://%s:%d' % (args.esp32_ip, args.esp32_udp))
 
     motion_ref = MotionPipeline(lpf_tau=args.lpf, washout_tau=args.washout,
                                 max_speed=args.max_speed)
@@ -262,7 +269,7 @@ async def main_async(args):
         threading.Thread(target=mock_loop, daemon=True).start()
         print('[mock] 本机合成遥测')
 
-    if args.mode == 'real':
+    if args.mode == 'real' and args.output == 'serial':
         port = args.serial
         if not port:
             ports = sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*'))
@@ -296,6 +303,10 @@ def main():
     ap.add_argument('--udp-port', type=int, default=4124)
     ap.add_argument('--serial', default=None)
     ap.add_argument('--baud', type=int, default=115200)
+    ap.add_argument('--output', choices=['serial', 'wifi'], default='serial',
+                    help='实机输出方式: serial=USB串口, wifi=UDP到ESP32')
+    ap.add_argument('--esp32-ip', default='192.168.1.50', help='WiFi模式下ESP32的IP')
+    ap.add_argument('--esp32-udp', type=int, default=4125, help='WiFi模式下ESP32的UDP端口')
     ap.add_argument('--port', type=int, default=8765)
     ap.add_argument('--stale', type=float, default=0.5)
     ap.add_argument('--lpf', type=float, default=0.15)

@@ -13,6 +13,9 @@
 #include <Arduino.h>
 #include <driver/rmt.h>
 #include "config.h"
+#ifdef USE_WIFI
+#include "wifi_udp.h"
+#endif
 
 struct Stepper {
     rmt_channel_t chan;
@@ -139,7 +142,7 @@ static uint16_t acc = 0;
 static unsigned long last_frame_ms = 0;
 static bool enabled = false;
 
-static void parse_byte(uint8_t b) {
+void parse_byte(uint8_t b) {   // wifi_udp.h 在 USE_WIFI 模式下 extern 引用
     // 失步自恢复：若已收到帧头但超过 100ms 未凑满一帧，清零状态重新找帧头。
     // 防止字节丢失后状态机卡在 byte_idx 奇数态、后续帧头被当数据吞掉。
     static unsigned long frame_start_ms = 0;
@@ -181,14 +184,23 @@ void setup() {
         pinMode(PIN_LIMIT[i], INPUT_PULLUP);
         rmt_init_axis(i);
     }
+#ifdef USE_WIFI
+    wifi_setup();
+    Serial.println("ESP32-S3 6-axis (WiFi UDP) ready");
+#else
+    Serial.println("ESP32-S3 6-axis (Serial) ready: <255><255> + 6x16bit");
+#endif
     last_frame_ms = millis();
-    Serial.println("ESP32-S3 6-axis ready: <255><255> + 6x16bit");
 }
 
 void loop() {
+#ifdef USE_WIFI
+    wifi_loop();
+#else
     // 限制每循环解析字节数，避免串口满速灌入时长时间阻塞限位检测/脉冲更新
     int max_bytes = 32;
     while (Serial.available() && max_bytes-- > 0) parse_byte((uint8_t)Serial.read());
+#endif
 
     // 限位触发: 立即停该轴
     for (int i = 0; i < NUM_AXES; i++) {
