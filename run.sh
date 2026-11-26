@@ -58,6 +58,7 @@ case "$CMD" in
     echo "[上位机自检]"; "$PY" "$HERE/host_app.py" --check
     echo "[MuJoCo校验]"; (cd "$HERE/G_chair_mujoco" && "$PY" sim.py --validate 2>&1 | grep "结论:")
     echo "[固件编译]"; (cd "$HERE/G_chair_esp32" && "$PIO" run -e esp32-s3-devkitc-1 2>&1 | grep -o SUCCESS | tail -1 && "$PIO" run -e esp32-s3-wifi 2>&1 | grep -o SUCCESS | tail -1 && "$PIO" run -e esp32-s3-estop 2>&1 | grep -o SUCCESS | tail -1)
+    echo "[Git同步]"; (cd "$HERE" && git status -sb | head -1)
     echo "===== 完成 ====="
     ;;
   build)
