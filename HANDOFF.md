@@ -19,7 +19,8 @@
 ## 必读顺序
 
 1. `STATUS.md` — 已完成/待实测/下一步（最重要）
-2. `SYSTEM_OVERVIEW.md` — 系统地图、快速开始、文件索引
+2. `QUICKSTART.md` — 实机部署一页纸（接线/烧录/自检）
+3. `SYSTEM_OVERVIEW.md` — 系统地图、快速开始、文件索引
 3. `HOST_APP.md` — 一键上位机（日常就用这个）
 4. `G_chair_esp32/POWERON_CHECKLIST.md` — 实物上电步骤（还没做）
 
