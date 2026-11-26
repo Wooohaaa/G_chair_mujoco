@@ -3,6 +3,7 @@
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PY="$HERE/G_chair_mujoco/.venv/bin/python"
+PIO="$HERE/G_chair_mujoco/.venv/bin/pio"
 
 usage() {
   echo "用法: ./run.sh <命令> [参数]"
@@ -12,8 +13,9 @@ usage() {
   echo "  host-wifi    启动上位机(实机模式，WiFi UDP)"
   echo "  panel        启动独立调试面板(手动姿态测试)"
   echo "  test         运行全链路回归测试(19项)"
-  echo "  test-robust  运行健壮性测试(12项: 断流/异常/边界/长跑)
-  analyze      分析录制的运行日志, 给调参建议 ($2=csv路径)"
+  echo "  test-robust  运行健壮性测试(12项: 断流/异常/边界/长跑)"
+  echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)"
+  echo "  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)"
   echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
   echo "  validate     运行 MuJoCo 静态校验"
   echo "  simulate     用真实视频录制 MuJoCo 对比视频"
@@ -48,6 +50,15 @@ case "$CMD" in
     ;;
   analyze)
     exec "$PY" "$HERE/tools/analyze_run.py" "${1:-}"
+    ;;
+  verify)
+    echo "===== 全量验证 ====="
+    echo "[链路测试]"; "$PY" "$HERE/tests/test_chain.py" | tail -3
+    echo "[健壮性测试]"; "$PY" "$HERE/tests/test_robustness.py" | tail -3
+    echo "[上位机自检]"; "$PY" "$HERE/host_app.py" --check
+    echo "[MuJoCo校验]"; (cd "$HERE/G_chair_mujoco" && "$PY" sim.py --validate 2>&1 | grep "结论:")
+    echo "[固件编译]"; (cd "$HERE/G_chair_esp32" && "$PIO" run -e esp32-s3-devkitc-1 2>&1 | grep -o SUCCESS | tail -1 && "$PIO" run -e esp32-s3-wifi 2>&1 | grep -o SUCCESS | tail -1 && "$PIO" run -e esp32-s3-estop 2>&1 | grep -o SUCCESS | tail -1)
+    echo "===== 完成 ====="
     ;;
   build)
     PIO="$HERE/G_chair_mujoco/.venv/bin/pio"
