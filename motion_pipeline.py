@@ -10,7 +10,9 @@ serial_bridge.py(实机/串口) 都调用它，保证仿真所见 = 实机所得
            → IK(实机几何) → 6轴缸位移(mm) → 限幅 → 串口帧
 
 默认用"加速度驱动映射"(motion_map.accel_driven_pose)，已验证左右转对称。
-IK 用 G_chair_sim 的 StewartPlatform（实机几何），不是 MuJoCo 的 rig。
+IK 用 make_rig(PARAMS) —— 与 MuJoCo 同一套实物几何（非奇异布局）；
+仿真端和实机端都通过本管线得到缸位移，保证"仿真所见 = 实机所得"。
+（修复前曾用 config.RIG 旧几何，同一位姿差 49.5mm，已废弃。）
 """
 import math
 import os
@@ -118,11 +120,37 @@ class MotionPipeline:
         disp = np.clip(disp, -PARAMS.range * 1000.0, PARAMS.range * 1000.0)
         return pose, disp
 
+    def set_params(self, lpf=None, washout=None, max_speed=None):
+        """运行时调整滤波/限速参数（供上位机 Web 界面在线调参）。"""
+        if lpf is not None:
+            self.lpf_tau = max(0.0, float(lpf))
+        if washout is not None:
+            self.washout_tau = max(0.0, float(washout))
+            if self.accel_model:
+                self.wo = Washout6D(self.washout_tau) if self.washout_tau > 0 else None
+        if max_speed is not None:
+            v = max(0.0, float(max_speed))
+            self.max_speed = v
+            if v > 0:
+                if self.speed_limiter is None:
+                    from speed_limiter import AdaptiveSpeedLimiter
+                    self.speed_limiter = AdaptiveSpeedLimiter(
+                        self.rig, max_speed_mm_s=v, dt=SIM['dt'])
+                else:
+                    self.speed_limiter.max_speed = v
+            else:
+                self.speed_limiter = None
+        return self.get_params()
+
+    def get_params(self):
+        return {'lpf': self.lpf_tau, 'washout': self.washout_tau,
+                'max_speed': self.max_speed, 'accel_model': self.accel_model}
+
     def reset(self):
         """断流后重置状态（低通/洗出/限速器回到初始），避免残留偏置。"""
         self._lp = {k: 0.0 for k in self._lp}
         self._lp_init = False
-        if self.wo is not None:
-            self.wo = Washout6D(self.washout_tau)
+        if self.accel_model:
+            self.wo = Washout6D(self.washout_tau) if self.washout_tau > 0 else None
         if self.speed_limiter is not None:
             self.speed_limiter.reset()

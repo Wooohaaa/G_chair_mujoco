@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""
+host_app.py — G_chair 一键上位机（实机链路 / 仿真链路 统一入口）
+
+把整条链路串起来，带 Web 实时监控 + 在线调参：
+    GTA5 UDP(25浮点) → MotionPipeline(映射/滤波/IK/限速) → 输出
+        --mode real : 串口帧 <255><255>+6×16bit → ESP32-S3 主控 → 电缸
+        --mode sim  : MuJoCo 闭环平台（无需硬件）
+
+运行:
+  # 实机（接 ESP32 USB 串口）
+  ./.venv/bin/python host_app.py --mode real --serial /dev/ttyUSB0
+  # 仿真（无硬件）
+  ./.venv/bin/python host_app.py --mode sim
+  # 无游戏数据先验证界面
+  ./.venv/bin/python host_app.py --mode sim --mock
+
+  浏览器: http://localhost:8765   （WebSocket 8766）
+"""
+import argparse
+import asyncio
+import glob
+import json
+import os
+import socket
+import sys
+import threading
+import time
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+from motion_pipeline import MotionPipeline
+from G_chair_sim.udp_telemetry import UdpTelemetryReceiver
+from G_chair_sim.config import TELEMETRY_CHANNELS, SIM
+
+DT = SIM['dt']
+
+# ---------------- 全局状态 ----------------
+state = {
+    'mode': 'sim', 'connected': False, 't0': time.time(),
+    'pose': [0.0] * 6,        # x,y,z(m) + r,p,y(rad)
+    'disp_mm': [0.0] * 6,     # 6缸位移
+    'speed': [0.0] * 6,
+    'lost': 0, 'frames': 0,
+    'hw': {'limit': 0, 'enabled': 0, 'watchdog': 0, 'frames': 0},
+    'params': {},
+    'recording': False,
+}
+_state_lock = threading.Lock()
+_rec_log = []
+
+
+def zero_telemetry():
+    return dict.fromkeys(TELEMETRY_CHANNELS, 0.0)
+
+
+# ---------------- 串口输出 + 状态回传 ----------------
+ser = None
+_rx_buf = b''
+
+
+def build_frame(disp_mm):
+    from G_chair_sim.controller import DualBoardController
+    ctl = DualBoardController()
+    f = bytearray([255, 255])
+    for d in disp_mm:
+        v = ctl.board1.displacement_to_flypt_16bit(float(d))
+        f += bytes([(v >> 8) & 0xFF, v & 0xFF])
+    return bytes(f)
+
+
+def status_rx_loop(port):
+    global _rx_buf
+    while port and port.is_open:
+        try:
+            chunk = port.read(port.in_waiting or 1)
+        except Exception:
+            break
+        if not chunk:
+            time.sleep(0.005)
+            continue
+        _rx_buf += chunk
+        while b'\n' in _rx_buf:
+            line, _rx_buf = _rx_buf.split(b'\n', 1)
+            try:
+                s = line.decode('ascii', 'ignore').strip()
+                if not s.startswith('$'):
+                    continue
+                parts = s[1:].split(',')
+                if len(parts) >= 15:
+                    with _state_lock:
+                        state['hw']['limit'] = int(parts[12])
+                        state['hw']['enabled'] = int(parts[13])
+                        state['hw']['watchdog'] = int(parts[14])
+                        state['hw']['frames'] += 1
+            except (ValueError, IndexError):
+                pass
+
+
+# ---------------- 数据链主循环（后台线程） ----------------
+def pipeline_loop(args, motion, rx, sim):
+    have_signal = False
+    next_t = time.time()
+    with _state_lock:
+        state['params'] = motion.get_params()
+
+    while True:
+        item = rx.get(max_age=args.stale)
+        if item is None:
+            if have_signal:
+                motion.reset()
+                have_signal = False
+            tele = zero_telemetry()
+            with _state_lock:
+                state['lost'] += 1
+        else:
+            tele = item[0]
+            have_signal = True
+
+        pose, disp = motion.pose_and_disp(tele, DT)
+        lim = np.clip(disp, -95, 95)
+
+        if args.mode == 'real' and ser and ser.is_open:
+            ser.write(build_frame(lim))
+        elif sim is not None:
+            sim.command_displacement(lim, DT)
+            sim.step()
+
+        # 缸速
+        with _state_lock:
+            prev = state['disp_mm']
+            speed = [abs(float(lim[i]) - prev[i]) / DT for i in range(6)]
+            state['pose'] = [float(x) for x in pose]
+            state['disp_mm'] = [float(x) for x in lim]
+            state['speed'] = [round(x, 1) for x in speed]
+            state['frames'] += 1
+            if state['recording']:
+                _rec_log.append([round(time.time() - state['t0'], 3)] +
+                                [float(x) for x in lim] +
+                                [float(x) for x in pose] + speed)
+
+        next_t += DT
+        time.sleep(max(0, next_t - time.time()))
+
+
+# ---------------- Web 服务 ----------------
+async def ws_handler(websocket):
+    async def push():
+        while True:
+            try:
+                with _state_lock:
+                    snap = dict(state)
+                    snap['hw'] = dict(state['hw'])
+                    snap['params'] = dict(state['params'])
+                await websocket.send(json.dumps(snap))
+            except Exception:
+                break
+            await asyncio.sleep(0.05)
+    pusher = asyncio.create_task(push())
+    try:
+        while True:
+            try:
+                msg = await websocket.recv()
+            except Exception:
+                break
+            try:
+                d = json.loads(msg)
+            except Exception:
+                continue
+            cmd = d.get('cmd')
+            if cmd == 'param':
+                with _state_lock:
+                    p = motion_ref.set_params(lpf=d.get('lpf'), washout=d.get('washout'),
+                                              max_speed=d.get('max_speed'))
+                    state['params'] = p
+            elif cmd == 'record_start':
+                _rec_log.clear()
+                with _state_lock:
+                    state['recording'] = True
+            elif cmd == 'record_stop':
+                with _state_lock:
+                    state['recording'] = False
+                save_log()
+            elif cmd == 'reset':
+                with _state_lock:
+                    motion_ref.reset()
+    finally:
+        pusher.cancel()
+
+
+def save_log():
+    if not _rec_log:
+        return
+    out_dir = os.path.join(HERE, 'output')
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, 'host_app_log.csv')
+    header = 't,' + ','.join('leg%d' % i for i in range(6)) + \
+             ',' + ','.join('pose%d' % i for i in range(6)) + ',speed0..5'
+    np.savetxt(path, np.array(_rec_log), delimiter=',', header=header, comments='')
+    print('[record] %s (%d rows)' % (path, len(_rec_log)))
+
+
+async def http_handler(reader, writer):
+    try:
+        req = await asyncio.wait_for(reader.read(2048), timeout=2.0)
+        line = req.decode('utf-8', 'ignore').split('\r\n')[0]
+        if 'GET /ports' in line:
+            body = json.dumps({'ports': sorted(
+                glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*') +
+                glob.glob('/dev/cu.usbmodem*'))}).encode()
+            ctype = 'application/json'
+        else:
+            with open(os.path.join(HERE, 'host_app.html'), 'rb') as f:
+                body = f.read()
+            body = body.replace(b"':WS_PORT'",
+                                ("':%d'" % (HTTP_PORT + 1)).encode())
+            ctype = 'text/html; charset=utf-8'
+        writer.write(('HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %d\r\n'
+                      'Access-Control-Allow-Origin: *\r\n\r\n' %
+                      (ctype, len(body))).encode())
+        writer.write(body)
+    except Exception:
+        pass
+    finally:
+        writer.close()
+
+
+motion_ref = None
+HTTP_PORT = 8765
+
+
+async def main_async(args):
+    global ser, motion_ref, HTTP_PORT
+    HTTP_PORT = args.port
+
+    motion_ref = MotionPipeline(lpf_tau=args.lpf, washout_tau=args.washout,
+                                max_speed=args.max_speed)
+    rx = UdpTelemetryReceiver(args.host, args.udp_port)
+    rx.start()
+
+    sim = None
+    if args.mode == 'sim':
+        from G_chair_mujoco.sim import GChairSim
+        sim = GChairSim()
+        print('[mode] 仿真 (MuJoCo)')
+
+    if args.mock:
+        # 用测试发送端，本机自环
+        from G_chair_sim.udp_sender_test import make_frame
+        def mock_loop():
+            while True:
+                tele = make_frame((time.time() - state['t0']) % 60)
+                payload = ' '.join('%.4f' % tele.get(k, 0.0)
+                                   for k in TELEMETRY_CHANNELS)
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.sendto(payload.encode(), ('127.0.0.1', args.udp_port))
+                s.close()
+                time.sleep(0.02)
+        threading.Thread(target=mock_loop, daemon=True).start()
+        print('[mock] 本机合成遥测')
+
+    if args.mode == 'real':
+        port = args.serial
+        if not port:
+            ports = sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*'))
+            port = ports[0] if ports else None
+        if port:
+            import serial as pyserial
+            ser = pyserial.Serial(port, baudrate=args.baud, bytesize=8,
+                                  parity='N', stopbits=1, timeout=0.1)
+            threading.Thread(target=status_rx_loop, args=(ser,), daemon=True).start()
+            print('[serial] %s' % port)
+            with _state_lock:
+                state['connected'] = True
+        else:
+            print('[serial] 未找到串口，实机模式将只计算不发送')
+
+    threading.Thread(target=pipeline_loop, args=(args, motion_ref, rx, sim),
+                     daemon=True).start()
+
+    http_server = await asyncio.start_server(http_handler, '0.0.0.0', args.port)
+    import websockets
+    ws_server = await websockets.serve(ws_handler, '0.0.0.0', args.port + 1)
+    print('上位机就绪: http://localhost:%d (WebSocket :%d)' %
+          (args.port, args.port + 1))
+    await asyncio.gather(http_server.wait_closed(), ws_server.wait_closed())
+
+
+def main():
+    ap = argparse.ArgumentParser(description='G_chair 一键上位机')
+    ap.add_argument('--mode', choices=['real', 'sim'], default='sim')
+    ap.add_argument('--host', default='0.0.0.0')
+    ap.add_argument('--udp-port', type=int, default=4124)
+    ap.add_argument('--serial', default=None)
+    ap.add_argument('--baud', type=int, default=115200)
+    ap.add_argument('--port', type=int, default=8765)
+    ap.add_argument('--stale', type=float, default=0.5)
+    ap.add_argument('--lpf', type=float, default=0.15)
+    ap.add_argument('--washout', type=float, default=2.5)
+    ap.add_argument('--max-speed', type=float, default=110.0)
+    ap.add_argument('--mock', action='store_true', help='本机合成遥测(无游戏机)')
+    args = ap.parse_args()
+    asyncio.run(main_async(args))
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>G_chair 上位机 · 实时监控与调参</title>
+<style>
+  body{font-family:-apple-system,"Segoe UI",sans-serif;margin:14px;background:#11141a;color:#e8eaed}
+  h1{font-size:19px;margin:0 0 10px}
+  .card{background:#1a1e26;border:1px solid #2a303a;border-radius:10px;padding:13px;margin-bottom:12px}
+  h2{font-size:13px;color:#9aa0aa;margin:0 0 9px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .kv{display:inline-block;min-width:80px;color:#9aa0aa}
+  .ok{color:#4ade80}.bad{color:#f87171}.warnc{color:#fbbf24}
+  canvas{background:#0d0f13;border-radius:6px}
+  .legend{font-size:11px;color:#9aa0aa;margin-top:4px}
+  button{background:#2a6df0;color:#fff;border:0;border-radius:6px;padding:6px 11px;margin:2px;cursor:pointer;font-size:12px}
+  button:hover{background:#3d7ff5}
+  input[type=range]{width:100%;accent-color:#2a6df0}
+  .pr{display:flex;align-items:center;gap:8px;margin:7px 0}
+  .pr label{min-width:95px;font-size:12px;color:#c9ced6}
+  .pr input[type=number]{width:56px;background:#0d0f13;border:1px solid #374151;color:#e8eaed;border-radius:4px;padding:3px;text-align:right}
+  .pr .val{min-width:46px;text-align:right;font-family:monospace;font-size:12px}
+</style>
+</head>
+<body>
+<h1>🎛️ G_chair 上位机 — 实时监控 / 在线调参</h1>
+<div id="top" class="card"></div>
+
+<div class="row">
+  <div class="card" style="flex:1;min-width:250px">
+    <h2>状态</h2><div id="status"></div>
+  </div>
+  <div class="card" style="flex:2;min-width:430px">
+    <h2>6 缸位移曲线 (mm) 实线=实际 / 虚线=目标</h2>
+    <canvas id="chart" width="640" height="210"></canvas>
+    <div class="legend" id="speedInfo"></div>
+  </div>
+  <div class="card" style="min-width:220px">
+    <h2>在线调参（实时生效）</h2>
+    <div class="pr"><label>低通 tau (s)</label><input type="range" id="lpf" min="0" max="0.6" step="0.01" value="0.15"><span class="val" id="lpfv">0.15</span></div>
+    <div class="pr"><label>洗出 tau (s)</label><input type="range" id="wash" min="0" max="8" step="0.1" value="2.5"><span class="val" id="washv">2.5</span></div>
+    <div class="pr"><label>最大缸速 mm/s</label><input type="range" id="spd" min="0" max="128" step="1" value="110"><span class="val" id="spdv">110</span></div>
+    <button onclick="applyParams()">应用参数</button>
+    <button onclick="sendParamDirect()">滑块即时应用</button>
+    <div class="legend">主控硬件上限 128mm/s；默认 110 留余量<br>断流自动回中位并重置滤波状态</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>录制 / 复位</h2>
+  <button onclick="cmd('record_start')">● 开始录制</button>
+  <button onclick="cmd('record_stop')">■ 停止并保存 CSV</button>
+  <button onclick="cmd('reset')">重置滤波状态</button>
+  <div class="legend">保存到 output/host_app_log.csv</div>
+</div>
+
+<script>
+const WS = 'ws://' + location.hostname + ':WS_PORT';
+let ws=null, hist={leg:[[],[],[],[],[],[]]}, dispTarget={leg:[[],[],[],[],[],[]]};
+const COLORS=['#f87171','#fbbf24','#4ade80','#38bdf8','#a78bfa','#f472b6'];
+
+function conn(){
+  ws=new WebSocket(WS);
+  ws.onmessage=e=>{const s=JSON.parse(e.data); update(s);};
+  ws.onclose=()=>setTimeout(conn,1000);
+}
+conn();
+function cmd(c,extra){if(ws&&ws.readyState===1)ws.send(JSON.stringify(Object.assign({cmd:c},extra||{})));}
+
+function applyParams(){sendParamDirect();}
+function sendParamDirect(){
+  const lpf=parseFloat(document.getElementById('lpf').value);
+  const wash=parseFloat(document.getElementById('wash').value);
+  const spd=parseFloat(document.getElementById('spd').value);
+  cmd('param',{lpf,washout:wash,max_speed:spd});
+  document.getElementById('lpfv').textContent=lpf.toFixed(2);
+  document.getElementById('washv').textContent=wash.toFixed(1);
+  document.getElementById('spdv').textContent=spd.toFixed(0);
+}
+['lpf','wash','spd'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{
+    document.getElementById(id+'v').textContent=document.getElementById(id).value;
+  });
+});
+
+function update(s){
+  document.getElementById('top').innerHTML =
+    '<b>模式:</b> '+s.mode+' &nbsp; <b>帧数:</b> '+s.frames+' &nbsp; <b>断流帧:</b> '+s.lost+
+    ' &nbsp; <b>串口:</b> '+(s.connected?'已连接':'未连接')+
+    ' &nbsp; <b>状态帧:</b> '+s.hw.frames;
+  const hw=s.hw;
+  let h='<div><span class="kv">使能</span><span class="'+(hw.enabled?'ok':'warnc')+'">'+(hw.enabled?'ON':'OFF')+'</span></div>';
+  h+='<div><span class="kv">看门狗</span><span class="'+(hw.watchdog?'bad':'ok')+'">'+(hw.watchdog?'回中位':'正常')+'</span></div>';
+  h+='<div><span class="kv">限位</span>'+[0,1,2,3,4,5].map(i=>'<span class="'+((hw.limit>>i)&1?'bad':'')+'">'+(i)+':'+((hw.limit>>i)&1?'触':'·')+' </span>').join('')+'</div>';
+  h+='<div style="margin-top:6px"><b>缸 实际mm / 速度mm/s</b></div>';
+  for(let i=0;i<6;i++){
+    const sp=s.speed[i]||0;
+    h+='<div><span class="kv">缸'+i+'</span>'+s.disp_mm[i].toFixed(1)+' / <span class="'+(sp>128?'bad':'')+'">'+sp.toFixed(0)+'</span></div>';
+  }
+  document.getElementById('status').innerHTML=h;
+  for(let i=0;i<6;i++){
+    hist.leg[i].push(s.disp_mm[i]); dispTarget.leg[i].push(s.disp_mm[i]);
+    if(hist.leg[i].length>240){hist.leg[i].shift();dispTarget.leg[i].shift();}
+  }
+  draw();
+  const mx=Math.max(...s.speed);
+  document.getElementById('speedInfo').innerHTML='最大缸速 <span class="'+(mx>128?'bad':'ok')+'">'+mx.toFixed(0)+'</span> mm/s (上限128)';
+  // 同步滑块显示
+  if(s.params){
+    document.getElementById('lpfv').textContent=s.params.lpf.toFixed(2);
+    document.getElementById('washv').textContent=s.params.washout.toFixed(1);
+    document.getElementById('spdv').textContent=s.params.max_speed.toFixed(0);
+  }
+}
+function draw(){
+  const c=document.getElementById('chart'),x=c.getContext('2d'),W=c.width,H=c.height;
+  x.clearRect(0,0,W,H);
+  x.strokeStyle='#2a303a';x.lineWidth=1;
+  for(let v=-100;v<=100;v+=50){const y=H/2-v/100*(H/2-10);x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke();}
+  x.strokeStyle='#445';x.beginPath();x.moveTo(0,H/2);x.lineTo(W,H/2);x.stroke();
+  const n=hist.leg[0].length;
+  for(let i=0;i<6;i++){
+    x.strokeStyle=COLORS[i];x.lineWidth=1.5;x.beginPath();
+    for(let k=0;k<n;k++){const px=k/239*W,py=H/2-hist.leg[i][k]/100*(H/2-10);k?x.lineTo(px,py):x.moveTo(px,py);}
+    x.stroke();
+  }
+}
+</script>
+</body>
+</html>
