@@ -72,6 +72,15 @@ GTA5 mod → UDP 25浮点 :4124 → UdpTelemetryReceiver
 
 输出：行程占用/超程、缸速分布与限速帧、体感幅度（roll/pitch/yaw 峰值）、
 左右对称性、以及"该加/减哪个增益"的建议。
+
+比较两次调参的效果（例如改增益前后各录一段）：
+
+```bash
+./run.sh analyze --compare output/before.csv output/after.csv
+```
+
+并排显示缸位移 MAX、缸速 P95/P99、roll MAX 及变化量，用数据确认改进。
+实测：roll MAX 从 1.33° → 2.66° 被正确检出。
 实测 8 秒回放日志：400 帧、50Hz、缸速 P99=106mm/s（未顶限速）、
 roll 峰值 1.33° → 建议加大 roll 增益。
 

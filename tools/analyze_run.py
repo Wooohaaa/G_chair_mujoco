@@ -24,7 +24,43 @@ def pct(a, q):
     return float(np.percentile(a, q))
 
 
+def compare(paths):
+    """并排比较多份录制，用于验证调参改进效果。"""
+    print('=' * 72)
+    print('运行对比: %s' % '  vs  '.join(os.path.basename(p) for p in paths))
+    print('=' * 72)
+    rows = []
+    for p in paths:
+        d = np.loadtxt(p, delimiter=',', skiprows=1)
+        if d.ndim == 1:
+            d = d.reshape(1, -1)
+        if d.shape[1] < 19:
+            print('  %s: 字段不足, 跳过' % os.path.basename(p))
+            continue
+        legs, pose, speed = d[:, 1:7], d[:, 7:13], d[:, 13:19]
+        roll = np.degrees(pose[:, 3])
+        rows.append((os.path.basename(p),
+                     np.max(np.abs(legs)), np.percentile(speed, 99),
+                     np.max(np.abs(roll)), np.percentile(speed, 95)))
+    if not rows:
+        return 1
+    print('  %-28s %10s %10s %10s %10s' %
+          ('文件', '缸位移MAX', '缸速P99', 'roll MAX', '缸速P95'))
+    for name, lm, s99, rm, s95 in rows:
+        print('  %-28s %9.1fmm %9.0fmm/s %9.2f° %9.0fmm/s' %
+              (name, lm, s99, rm, s95))
+    if len(rows) == 2:
+        a, b = rows[0], rows[1]
+        print('\n  变化(第2份相对第1份):')
+        print('    缸位移MAX %+.1fmm, 缸速P99 %+.0fmm/s, roll MAX %+.2f°' %
+              (b[1] - a[1], b[2] - a[2], b[3] - a[3]))
+    print('=' * 72)
+    return 0
+
+
 def main():
+    if len(sys.argv) > 2 and sys.argv[1] == '--compare':
+        return compare(sys.argv[2:])
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
         ROOT, 'output', 'host_app_log.csv')
     if not os.path.exists(path):
