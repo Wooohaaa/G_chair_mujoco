@@ -2,6 +2,18 @@
 
 > 按时间倒序记录重要改动。当前状态见 `STATUS.md`，系统地图见 `SYSTEM_OVERVIEW.md`。
 
+## 2026-11-27 晚间补充（20:35）
+
+- 完整验证体系：`preflight`（8 项检查 / 57 测试）、`report`（时间戳证据）、
+  `doctor`（环境诊断）、`test_protocol.py`（15 项）、`test_web.py`（5 项）
+- 上位机：手动姿态保持 + 自定义 6 缸输入、参数持久化、6DOF 位姿显示、
+  遥测停滞/主控掉线告警、WiFi UDP 状态回传闭环
+- 固件：`#J<轴>,<步数>` 单轴点动命令、WiFi 模式 `$` 帧经 UDP 回传、
+  `#T` 非阻塞自检、三环境编译 SUCCESS
+- 视觉：`--fast` 轻量光流（PC 2× 提速）、`analyze_paired` 增益建议、一键部署脚本
+- 文档：`SYSTEM_OVERVIEW` / `STATUS` / `HANDOFF` / `QUICKSTART` / `PROTOCOL` /
+  `CHEATSHEET` / `CHANGELOG` 共 30 份；GitHub DNS 排障记录
+
 ## 2026-11-27（第二轮完善）
 
 ### 安全与健壮性
