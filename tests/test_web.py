@@ -44,8 +44,11 @@ def main():
     if os.path.exists(tuning):
         backup = open(tuning).read()
 
+    import tempfile
+    import shutil
+    tmpdir = tempfile.mkdtemp(prefix='gchair_webtest_')
     env = dict(os.environ)
-    env['GCHAIR_LOG_PATH'] = '/tmp/opencode/web_test_log.csv'  # 不污染真实日志
+    env['GCHAIR_LOG_PATH'] = os.path.join(tmpdir, 'web_test_log.csv')  # 不污染真实日志
     proc = subprocess.Popen([PY, os.path.join(ROOT, 'host_app.py'),
                              '--mode', 'sim', '--mock', '--port', str(PORT)],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -131,6 +134,8 @@ def main():
             proc2.wait(timeout=3)
         except Exception:
             proc2.kill()
+
+    shutil.rmtree(tmpdir, ignore_errors=True)
 
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
