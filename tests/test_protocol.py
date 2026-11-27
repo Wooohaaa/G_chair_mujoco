@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(ROOT, 'G_chair_sim'))
 
 from controller import DualBoardController
 from config import TELEMETRY_CHANNELS
+from motion_pipeline import MotionPipeline
 
 PASS = FAIL = 0
 DIV = 65535 / 38400
@@ -60,6 +61,14 @@ def main():
     check('超程钳位到+95mm', build_frame([1000] * 6)[2:4] == b'\xfe\xaa')
     check('NaN归零中位', build_frame([float('nan')] * 6)[2:4] == b'\x80\x00')
     check('短列表补中位', len(build_frame([1, 2, 3])) == 14)
+    # 在线调参同样拒绝 NaN/Inf，但同包里的有效参数仍应生效
+    m = MotionPipeline()
+    m.set_params(lpf=0.31, gains={'roll': 44})
+    p = m.set_params(lpf=float('nan'), max_speed=float('inf'),
+                     gains={'roll': float('nan'), 'pitch': 51})
+    check('调参NaN净化', p['lpf'] == 0.31 and p['max_speed'] == 110
+          and p['roll'] == 44 and p['pitch'] == 51,
+          'lpf=%s roll=%s pitch=%s' % (p['lpf'], p['roll'], p['pitch']))
 
     print('\n[4] 25通道定义')
     check('通道数25', len(TELEMETRY_CHANNELS) == 25, '%d' % len(TELEMETRY_CHANNELS))

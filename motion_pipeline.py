@@ -144,28 +144,45 @@ class MotionPipeline:
 
     def set_params(self, lpf=None, washout=None, max_speed=None, gains=None):
         """运行时调整滤波/限速/增益参数（供上位机 Web 界面在线调参）。"""
+        # 非有限输入（Web 误输 NaN/Inf 或恶意包）直接忽略，保持当前有效参数，
+        # 避免一个坏值永久污染低通/洗出/限速状态。
+        def finite(v):
+            try:
+                x = float(v)
+            except (TypeError, ValueError):
+                return None
+            return x if math.isfinite(x) else None
+
         if lpf is not None:
-            self.lpf_tau = max(0.0, float(lpf))
+            x = finite(lpf)
+            if x is not None:
+                self.lpf_tau = max(0.0, x)
         if washout is not None:
-            self.washout_tau = max(0.0, float(washout))
-            if self.accel_model:
-                self.wo = Washout6D(self.washout_tau) if self.washout_tau > 0 else None
+            x = finite(washout)
+            if x is not None:
+                self.washout_tau = max(0.0, x)
+                if self.accel_model:
+                    self.wo = Washout6D(self.washout_tau) if self.washout_tau > 0 else None
         if max_speed is not None:
-            v = max(0.0, float(max_speed))
-            self.max_speed = v
-            if v > 0:
-                if self.speed_limiter is None:
-                    from speed_limiter import AdaptiveSpeedLimiter
-                    self.speed_limiter = AdaptiveSpeedLimiter(
-                        self.rig, max_speed_mm_s=v, dt=SIM['dt'])
+            x = finite(max_speed)
+            if x is not None:
+                v = max(0.0, x)
+                self.max_speed = v
+                if v > 0:
+                    if self.speed_limiter is None:
+                        from speed_limiter import AdaptiveSpeedLimiter
+                        self.speed_limiter = AdaptiveSpeedLimiter(
+                            self.rig, max_speed_mm_s=v, dt=SIM['dt'])
+                    else:
+                        self.speed_limiter.max_speed = v
                 else:
-                    self.speed_limiter.max_speed = v
-            else:
-                self.speed_limiter = None
+                    self.speed_limiter = None
         if gains:
             for k, v in gains.items():
                 if hasattr(self.gains, k):
-                    setattr(self.gains, k, float(v))
+                    x = finite(v)
+                    if x is not None:
+                        setattr(self.gains, k, x)
         return self.get_params()
 
     def get_params(self):

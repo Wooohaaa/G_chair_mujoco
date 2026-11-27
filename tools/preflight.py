@@ -44,7 +44,7 @@ def main():
     # 2b. 协议换算测试
     ok, out = run([PY, 'tests/test_protocol.py'])
     line = [l for l in out.splitlines() if '结果:' in l]
-    checks.append(('协议/换算测试(26项)', ok, line[-1] if line else '无输出'))
+    checks.append(('协议/换算测试(27项)', ok, line[-1] if line else '无输出'))
 
     # 2c. Web/WS 接口测试
     ok, out = run([PY, 'tests/test_web.py'])
