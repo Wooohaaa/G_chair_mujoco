@@ -76,6 +76,39 @@ def build_frame(disp_mm):
     return bytes(f)
 
 
+def wifi_status_rx_loop(port):
+    """WiFi 模式：在同一 UDP 端口收 ESP32 的 $ 状态帧（与发送端口共用）。"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind(('0.0.0.0', port))
+    except OSError:
+        return
+    s.settimeout(0.2)
+    while True:
+        try:
+            data, _ = s.recvfrom(2048)
+        except socket.timeout:
+            continue
+        except OSError:
+            break
+        for line in data.split(b'\n'):
+            try:
+                t = line.decode('ascii', 'ignore').strip()
+                if not t.startswith('$'):
+                    continue
+                parts = t[1:].split(',')
+                if len(parts) >= 15:
+                    with _state_lock:
+                        state['hw']['limit'] = int(parts[12])
+                        state['hw']['enabled'] = int(parts[13])
+                        state['hw']['watchdog'] = int(parts[14])
+                        state['hw']['frames'] += 1
+                        state['hw_last_status'] = time.time()
+            except (ValueError, IndexError):
+                pass
+
+
 def status_rx_loop(port):
     global _rx_buf
     while port and port.is_open:
@@ -328,7 +361,9 @@ async def main_async(args):
     if args.output == 'wifi':
         wifi_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print('[wifi] 输出到 udp://%s:%d' % (args.esp32_ip, args.esp32_udp))
-        # WiFi 模式视为已连接（UDP 无连接概念，看门狗在 ESP32 侧）
+        # WiFi 模式：在 esp32_udp 端口收 ESP32 的状态回传（与上位机发帧同端口）
+        threading.Thread(target=wifi_status_rx_loop,
+                         args=(args.esp32_udp,), daemon=True).start()
         with _state_lock:
             state['connected'] = True
 
