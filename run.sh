@@ -14,7 +14,7 @@ usage() {
   echo "  panel        启动独立调试面板(手动姿态测试)"
   echo "  test         运行全链路回归测试(19项)"
   echo "  test-robust  运行健壮性测试(18项: 断流/异常/边界/长跑/掉线/停滞)"
-  echo "  test-proto   运行协议/换算测试(22项: 中位精度/帧格式/状态帧兼容/日志分析)"
+  echo "  test-proto   运行协议/换算测试(23项: 中位精度/帧格式/状态帧兼容/日志分析)"
   echo "  test-web     运行 Web/WS 接口测试(6项: 手动/调参/录制/WiFi状态帧)"
   echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)"
   echo "  report       全量验证并存成带时间戳的报告文件"

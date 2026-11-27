@@ -108,6 +108,17 @@ def main():
               [l.strip() for l in r.stdout.splitlines() if '最大误差' in l][:1])
     finally:
         os.remove(tmp)
+    # --compare 双文件对比
+    with tempfile.NamedTemporaryFile('w', suffix='.csv', delete=False) as f:
+        f.write(hdr + '\n')
+        np.savetxt(f, data, delimiter=',')
+        tmp = f.name
+    try:
+        r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'analyze_run.py'),
+                            '--compare', tmp, tmp], capture_output=True, text=True)
+        check('--compare 对比', r.returncode == 0 and '变化(第2份相对第1份)' in r.stdout)
+    finally:
+        os.remove(tmp)
     # 旧格式 19 列应优雅跳过
     with tempfile.NamedTemporaryFile('w', suffix='.csv', delete=False) as f:
         f.write(hdr.split(',hwlimit')[0] + '\n')
