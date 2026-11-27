@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """test_protocol.py — 协议/换算正确性回归测试（保护中位精度与帧格式）。"""
 import os
+import re
 import sys
 
 import numpy as np
@@ -175,12 +176,42 @@ def main():
         check('带t列遥测兼容', r4.returncode == 0 and '回放' in r4.stdout
               and os.path.exists(log_t))
 
+        # analyze_paired: 相关系数必须≤1，真值恒定通道应跳过而非产出天文数字
+        hv = os.path.join(td, 'vision.csv')
+        ht = os.path.join(td, 'truth.csv')
+        hdr25 = 't,' + ','.join(TELEMETRY_CHANNELS) + '\n'
+        xv = np.zeros((60, 25)); xv[:, 0] = 0.3 * np.sin(np.arange(60) * 0.1)
+        xt = np.zeros((60, 25)); xt[:, 0] = 0.5 * np.sin(np.arange(60) * 0.1)
+        for p, arr in ((hv, xv), (ht, xt)):
+            with open(p, 'w') as f:
+                f.write(hdr25)
+                np.savetxt(f, np.column_stack([np.arange(60) * 0.02, arr]),
+                           delimiter=',', comments='', fmt='%.6f')
+        r5 = subprocess.run([sys.executable, os.path.join(ROOT, 'G_chair_vision',
+                                                          'analyze_paired.py'),
+                             '--vision', hv, '--truth', ht],
+                            capture_output=True, text=True)
+        cors = []
+        for line in r5.stdout.splitlines():
+            parts = line.split()
+            if (parts and parts[0] in ('accel_x', 'accel_z', 'accel_y',
+                                       'rot_x', 'rot_y', 'rot_z')
+                    and len(parts) >= 5):
+                try:
+                    cors.append(float(parts[4]))   # 表格第5列=相关系数
+                except ValueError:
+                    pass
+        check('配对分析相关性有效', r5.returncode == 0 and cors
+              and any(c > 0.5 for c in cors)      # 同源正弦应高相关
+              and all(abs(c) <= 1.0 for c in cors)  # 绝不能超过1
+              and '真值恒定' in r5.stdout,
+              '相关系数=%s' % cors[:3])
+
     print('\n[8] 上位机 ↔ 固件常量一致性（静态扫描 config.h）')
     cfg_path = os.path.join(ROOT, 'G_chair_esp32', 'include', 'config.h')
     cfg = open(cfg_path, encoding='utf-8').read()
 
     def macro(name):
-        import re
         m = re.search(r'^#define\s+%s\s+(0[xX][0-9A-Fa-f]+|[0-9.]+)' % name, cfg, re.M)
         if not m:
             return None
@@ -200,7 +231,6 @@ def main():
     check('串口波特率一致', macro('SERIAL_BAUD') == 115200.0)
     wifi_hdr = open(os.path.join(ROOT, 'G_chair_esp32', 'include', 'wifi_config.h'),
                     encoding='utf-8').read()
-    import re
     wport = re.search(r'#define\s+WIFI_UDP_PORT\s+(\d+)', wifi_hdr)
     host_src = open(os.path.join(ROOT, 'host_app.py'), encoding='utf-8').read()
     hport = re.search(r"esp32-udp'.*?default=(\d+)", host_src)

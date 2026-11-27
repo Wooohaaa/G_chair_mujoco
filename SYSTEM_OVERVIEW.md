@@ -92,7 +92,7 @@ cd sim
 | `FLYPT_GAMES_REFERENCE.md` | FlyPT 支持游戏与数据来源（GTA5 不在其中；本系统不依赖 FlyPT） |
 | `tests/test_chain.py` | 全链路回归测试（19 项） |
 | `tests/test_robustness.py` | 健壮性测试（18 项） |
-| `tests/test_protocol.py` | 协议/换算/状态帧/日志分析/常量一致性测试（37 项） |
+| `tests/test_protocol.py` | 协议/换算/状态帧/日志分析/常量一致性测试（38 项） |
 | `tests/test_web.py` | Web/WS 接口 + WiFi 状态帧测试（6 项） |
 | `tools/preflight.py` | 上实机前 GO/NO-GO 汇总（9 项检查） |
 | `tools/doctor.py` | 环境诊断（依赖/串口/ADB/GitHub DNS） |
@@ -119,5 +119,5 @@ cd sim
 | 16bit 换算精度 | ±95mm 误差 <0.001mm |
 | RK3566 视觉帧率 | ~13.7 FPS（光流占 97%）；PC ~97 FPS |
 | 全链路测试 | 19 PASS / 0 FAIL |
-| 全部自动化测试 | 80 PASS（19+18+37+6），preflight 9 项全绿 |
+| 全部自动化测试 | 81 PASS（19+18+38+6），preflight 9 项全绿 |
 | PC 视觉帧率（--fast） | ~208 FPS（默认 ~97，2× 提速） |

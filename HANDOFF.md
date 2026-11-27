@@ -31,7 +31,7 @@
 | 最后提交 | 见 git log（每次提交后更新） |
 | 工作区状态 | 干净、已同步；`./run.sh verify` 一键输出全部健康证据 |
 | 新增工具 | `host_app.py --check`（启动自检）、`tools/analyze_run.py`（录制分析 + `--compare` 调参前后对比） |
-| 测试 | 链路 19 + 健壮性 18 + 协议 37 + Web 6 = **80 PASS**，MuJoCo 校验 PASS |
+| 测试 | 链路 19 + 健壮性 18 + 协议 38 + Web 6 = **81 PASS**，MuJoCo 校验 PASS |
 | CI 模板 | `tools/ci/verify.yml.example`：有 `workflow` scope 的账号可复制到 `.github/workflows/verify.yml` 启用（当前 token 无该权限，故只保留模板） |
 | 固件 | 串口/WiFi/急停三版编译 SUCCESS |
 | 唯一未完成 | **实物单缸测试**（3.3V 直连伺服是否可行） |

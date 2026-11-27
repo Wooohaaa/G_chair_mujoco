@@ -24,3 +24,4 @@ GchairUnity/
 # ESP32 编译产物
 G_chair_esp32/.pio/
 G_chair_esp32/.vscode/
+G_chair_vision/paired_analysis.png

@@ -61,8 +61,6 @@ def best_lag(a, b, max_lag=30):
     """找 b 相对 a 的最佳延迟(帧)。正=b滞后a。"""
     if len(a) < 10 or len(b) < 10:
         return 0, 0.0
-    a = (a - a.mean()) / (a.std() + 1e-9)
-    b = (b - b.mean()) / (b.std() + 1e-9)
     best_lag_v, best_c = 0, -2.0
     for lag in range(-max_lag, max_lag + 1):
         if lag >= 0:
@@ -72,7 +70,14 @@ def best_lag(a, b, max_lag=30):
         n = min(len(aa), len(bb))
         if n < 10:
             continue
-        c = float(np.mean(aa[:n] * bb[:n]))
+        aa, bb = aa[:n], bb[:n]
+        # 必须按【对齐后的切片】重新去均值/归一化，否则用全段 std 归一化
+        # 错位切片会让相关系数 >1（数学上不可能），增益建议也随之失真。
+        sa, sb = aa.std(), bb.std()
+        if sa < 1e-9 or sb < 1e-9:
+            continue
+        c = float(np.mean(((aa - aa.mean()) / sa) * ((bb - bb.mean()) / sb)))
+        c = max(-1.0, min(1.0, c))
         if c > best_c:
             best_c, best_lag_v = c, lag
     return best_lag_v, best_c
@@ -98,7 +103,16 @@ def analyze(vision_path, truth_path, dt=0.02):
         n = min(len(a), len(b))
         a, b = a[:n], b[:n]
         std_a, std_b = a.std(), b.std()
-        ratio = std_a / (std_b + 1e-9)
+        # 真值几乎恒定时，幅值比与相关性都没有意义，直接标注跳过
+        if std_b < 1e-4:
+            ratio = float('nan')
+            lag, corr = 0, 0.0
+            verdict = '--- 真值恒定, 跳过 ---'
+            print('%-9s %8.3f %8.3f %8s %10.3f  %s' %
+                  (k, std_a, std_b, 'nan', corr, verdict))
+            results[k] = (std_a, std_b, ratio, corr, lag)
+            continue
+        ratio = std_a / std_b
         lag, corr = best_lag(a, b)
         if corr > 0.6 and 0.6 < ratio < 1.6:
             verdict = 'OK'
