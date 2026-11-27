@@ -15,7 +15,8 @@ usage() {
   echo "  test         运行全链路回归测试(19项)"
   echo "  test-robust  运行健壮性测试(12项: 断流/异常/边界/长跑)"
   echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)
-  fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)"
+  fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)
+  fullchain    全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)"
   echo "  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)"
   echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
   echo "  validate     运行 MuJoCo 静态校验"
@@ -54,6 +55,9 @@ case "$CMD" in
     ;;
   fwsim)
     exec "$PY" "$HERE/G_chair_esp32/tests/firmware_sim.py" "$@"
+    ;;
+  fullchain)
+    exec "$PY" "$HERE/tools/full_chain_sim.py" "$@"
     ;;
   verify)
     echo "===== 全量验证 ====="

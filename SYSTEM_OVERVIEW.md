@@ -46,6 +46,8 @@ ESP32 只负责把 6 缸位移转成精确步进脉冲（硬件 RMT，不受 WiF
 ```bash
 cd sim
 ./run.sh verify                        # 一键全量验证(测试+自检+校验+三版固件编译)
+./run.sh fwsim                         # 固件步进逻辑仿真(上真实电机前)
+./run.sh fullchain                     # 全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)
 ./run.sh test                          # 19 项回归测试，确认链路正常
 ./run.sh analyze output/host_app_log.csv  # 分析录制日志，给调参建议
 ./run.sh host-sim --mock               # 无硬件看 Web 界面 (http://localhost:8765)
