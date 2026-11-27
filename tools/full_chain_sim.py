@@ -34,6 +34,10 @@ SUB = int(round(DT * 1e6 / SAMPLE_PERIOD_US))   # 每 20ms 帧 5 个 4ms tick
 
 
 def main():
+    if '--help' in sys.argv or '-h' in sys.argv:
+        print('用法: full_chain_sim.py [遥测csv] [帧数]')
+        print('默认: G_chair_mujoco/output/raw_telemetry.csv, 1500 帧')
+        return 0
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
         ROOT, 'G_chair_mujoco', 'output', 'raw_telemetry.csv')
     limit = int(sys.argv[2]) if len(sys.argv) > 2 else 1500
