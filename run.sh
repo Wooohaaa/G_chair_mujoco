@@ -13,7 +13,8 @@ usage() {
   echo "  host-wifi    启动上位机(实机模式，WiFi UDP)"
   echo "  panel        启动独立调试面板(手动姿态测试)"
   echo "  test         运行全链路回归测试(19项)"
-  echo "  test-robust  运行健壮性测试(17项: 断流/异常/边界/长跑/掉线/停滞)"
+  echo "  test-robust  运行健壮性测试(18项: 断流/异常/边界/长跑/掉线/停滞)"
+  echo "  test-proto   运行协议/换算测试(15项: 中位精度/帧格式/通道顺序)"
   echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)
   fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)
   fullchain    全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)
@@ -52,6 +53,9 @@ case "$CMD" in
     ;;
   test-robust)
     exec "$PY" "$HERE/tests/test_robustness.py"
+    ;;
+  test-proto)
+    exec "$PY" "$HERE/tests/test_protocol.py"
     ;;
   record)
     exec "$PY" "$HERE/G_chair_mujoco/capture_raw.py" "${1:-60}" "${2:-}"
