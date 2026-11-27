@@ -22,6 +22,7 @@
 | 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 18 PASS + `test_protocol.py` 15 PASS + `test_web.py` 5 PASS |
 | 全链路数值仿真 | ✅ | 16bit量化误差 0.0033mm、缸速 ≤110mm/s、MuJoCo 跟踪 RMS 1.43mm |
 | 四种参数模式 | ✅ | 默认/无限速/FlyPT/无滤波 各 800 帧均有限、位移合理（限速模式 15.3mm vs 无限速 53.1mm，证明限速生效） |
+| 固件 jog 命令 | ✅ | `#J0,300`=+1.5mm、`#J2,-200`=−1.0mm、超程钳位、非法轴拒绝 |
 | Web 手动测试 | ✅ | 9 预设 + 自定义6缸输入，指令保持直到"恢复遥测"，实测 30.0mm 稳定保持 |
 | WiFi 状态闭环 | ✅ | 固件 UDP 回传 `$` 帧，实测 60 帧/3s、状态龄 0.05s，无"未连接"误报 |
 | RK3566 一键部署 | ✅ | `./run.sh deploy-board` 推送视觉节点（未接板时优雅退出） |
