@@ -46,8 +46,9 @@
     <div class="pr"><label>俯仰 pitch</label><input type="range" id="gpitch" min="0" max="60" step="1" value="30"><span class="val" id="gpitchv">30</span></div>
     <div class="pr"><label>偏航 yaw</label><input type="range" id="gyaw" min="0" max="30" step="0.5" value="10"><span class="val" id="gyawv">10</span></div>
     <div class="pr"><label>横移 sway</label><input type="range" id="gsway" min="0" max="200" step="5" value="100"><span class="val" id="gswayv">100</span></div>
-    <button onclick="applyParams()">应用参数</button>
+    <button onclick="applyParams()">应用参数（自动保存）</button>
     <button onclick="sendParamDirect()">滑块即时应用</button>
+    <button onclick="cmd('defaults')" style="background:#374151">恢复默认</button>
     <div class="legend">主控硬件上限 128mm/s；默认 110 留余量<br>断流自动回中位并重置滤波状态</div>
   </div>
 </div>

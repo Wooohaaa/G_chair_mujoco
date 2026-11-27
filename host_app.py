@@ -202,6 +202,7 @@ async def ws_handler(websocket):
                     p = motion_ref.set_params(lpf=d.get('lpf'), washout=d.get('washout'),
                                               max_speed=d.get('max_speed'), gains=gains)
                     state['params'] = p
+                    save_tuning(p)   # 调参自动持久化，重启后保留
             elif cmd == 'record_start':
                 _rec_log.clear()
                 with _state_lock:
@@ -213,6 +214,13 @@ async def ws_handler(websocket):
             elif cmd == 'reset':
                 with _state_lock:
                     motion_ref.reset()
+            elif cmd == 'defaults':
+                with _state_lock:
+                    p = motion_ref.set_params(lpf=0.15, washout=2.5, max_speed=110.0,
+                                              gains={'roll': 35.0, 'pitch': 30.0,
+                                                     'yaw': 10.0, 'sway': 100.0})
+                    state['params'] = p
+                    save_tuning(p)
     finally:
         pusher.cancel()
 
@@ -257,6 +265,26 @@ async def http_handler(reader, writer):
 
 motion_ref = None
 HTTP_PORT = 8765
+TUNING_FILE = os.path.join(HERE, 'output', 'tuning.json')
+
+
+def save_tuning(params):
+    try:
+        os.makedirs(os.path.dirname(TUNING_FILE), exist_ok=True)
+        with open(TUNING_FILE, 'w') as f:
+            json.dump(params, f, indent=2)
+    except Exception as e:
+        print('[tuning] 保存失败: %s' % e)
+
+
+def load_tuning():
+    if not os.path.exists(TUNING_FILE):
+        return None
+    try:
+        with open(TUNING_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 
 async def main_async(args):
@@ -269,6 +297,11 @@ async def main_async(args):
 
     motion_ref = MotionPipeline(lpf_tau=args.lpf, washout_tau=args.washout,
                                 max_speed=args.max_speed)
+    saved = load_tuning()
+    if saved:
+        p = motion_ref.set_params(lpf=saved.get('lpf'), washout=saved.get('washout'),
+                                  max_speed=saved.get('max_speed'), gains=saved)
+        print('[tuning] 已从 %s 恢复参数: %s' % (os.path.basename(TUNING_FILE), p))
     rx = UdpTelemetryReceiver(args.host, args.udp_port)
     rx.start()
 
