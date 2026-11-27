@@ -49,7 +49,7 @@
     <button onclick="applyParams()">应用参数（自动保存）</button>
     <button onclick="sendParamDirect()">滑块即时应用</button>
     <button onclick="cmd('defaults')" style="background:#374151">恢复默认</button>
-    <div class="legend">主控硬件上限 128mm/s；默认 110 留余量<br>断流自动回中位并重置滤波状态</div>
+    <div class="legend">主控硬件上限 128mm/s；默认 110 留余量<br>断流自动回中位并重置滤波状态<br>曲线：<b>实线</b>=上位机指令，<b>虚线</b>=固件实际位置（重合=跟踪正常）</div>
   </div>
 </div>
 
@@ -88,7 +88,7 @@
 
 <script>
 const WS = 'ws://' + location.hostname + ':WS_PORT';
-let ws=null, hist={leg:[[],[],[],[],[],[]]}, dispTarget={leg:[[],[],[],[],[],[]]};
+let ws=null, hist={leg:[[],[],[],[],[],[]], actual:[[],[],[],[],[],[]]}, dispTarget={leg:[[],[],[],[],[],[]]};
 const COLORS=['#f87171','#fbbf24','#4ade80','#38bdf8','#a78bfa','#f472b6'];
 
 function conn(){
@@ -178,7 +178,12 @@ function update(s){
   document.getElementById('status').innerHTML=h;
   for(let i=0;i<6;i++){
     hist.leg[i].push(s.disp_mm[i]); dispTarget.leg[i].push(s.disp_mm[i]);
-    if(hist.leg[i].length>240){hist.leg[i].shift();dispTarget.leg[i].shift();}
+    // 固件回传的实际位置（步→mm）；无状态帧时记 NaN，画虚线时跳过
+    const hasFw=hw.frames>0 && hw.cur && hw.cur.length===6;
+    hist.actual[i].push(hasFw ? (hw.cur[i]-19200)*0.005 : NaN);
+    if(hist.leg[i].length>240){
+      hist.leg[i].shift();dispTarget.leg[i].shift();hist.actual[i].shift();
+    }
   }
   draw();
   const mx=Math.max(...s.speed);
@@ -203,6 +208,20 @@ function draw(){
   for(let v=-100;v<=100;v+=50){const y=H/2-v/100*(H/2-10);x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke();}
   x.strokeStyle='#445';x.beginPath();x.moveTo(0,H/2);x.lineTo(W,H/2);x.stroke();
   const n=hist.leg[0].length;
+  // 虚线=固件实际位置；实线=上位机指令。两者重合说明跟踪正常。
+  x.setLineDash([3,3]);x.globalAlpha=0.6;
+  for(let i=0;i<6;i++){
+    x.strokeStyle=COLORS[i];x.lineWidth=1;x.beginPath();
+    let started=false;
+    for(let k=0;k<n;k++){
+      const v=hist.actual[i][k];
+      if(!isFinite(v)){started=false;continue;}
+      const px=k/239*W,py=H/2-v/100*(H/2-10);
+      if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);
+    }
+    x.stroke();
+  }
+  x.setLineDash([]);x.globalAlpha=1;
   for(let i=0;i<6;i++){
     x.strokeStyle=COLORS[i];x.lineWidth=1.5;x.beginPath();
     for(let k=0;k<n;k++){const px=k/239*W,py=H/2-hist.leg[i][k]/100*(H/2-10);k?x.lineTo(px,py):x.moveTo(px,py);}
