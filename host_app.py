@@ -299,9 +299,12 @@ async def main_async(args):
                                 max_speed=args.max_speed)
     saved = load_tuning()
     if saved:
-        p = motion_ref.set_params(lpf=saved.get('lpf'), washout=saved.get('washout'),
-                                  max_speed=saved.get('max_speed'), gains=saved)
-        print('[tuning] 已从 %s 恢复参数: %s' % (os.path.basename(TUNING_FILE), p))
+        try:
+            p = motion_ref.set_params(lpf=saved.get('lpf'), washout=saved.get('washout'),
+                                      max_speed=saved.get('max_speed'), gains=saved)
+            print('[tuning] 已从 %s 恢复参数: %s' % (os.path.basename(TUNING_FILE), p))
+        except (TypeError, ValueError) as e:
+            print('[tuning] 参数文件损坏，使用默认值: %s' % e)
     rx = UdpTelemetryReceiver(args.host, args.udp_port)
     rx.start()
 
