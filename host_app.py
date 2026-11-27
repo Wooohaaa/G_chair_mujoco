@@ -46,7 +46,8 @@ state = {
     'speed': [0.0] * 6,
     'lost': 0, 'frames': 0,
     'hw': {'limit': 0, 'enabled': 0, 'watchdog': 0, 'latch': 0, 'frames': 0,
-           'cur': [19200] * 6, 'tgt': [19200] * 6},   # 固件回传的实际/目标步数
+           'cur': [19200] * 6, 'tgt': [19200] * 6,   # 固件回传的实际/目标步数
+           'estop': 0},                              # 可选软件急停 GPIO 状态
     'hw_last_status': 0.0,   # 最近一帧状态回传的时间，用于检测主控掉线
     'tele_stale': 0.0,       # 遥测数值停滞时长(秒)，检测游戏暂停/mod卡死
     'params': {},
@@ -74,8 +75,10 @@ def parse_status_frame(t, hw):
     hw['limit'] = int(parts[12])
     hw['enabled'] = int(parts[13])
     hw['watchdog'] = int(parts[14])
+    if len(parts) >= 16 and parts[15][:1].isdigit():
+        hw['estop'] = int(parts[15])          # 旧/新急停版的第16字段
     if len(parts) >= 16 and parts[-1].startswith('L'):
-        hw['latch'] = int(parts[-1][1:])
+        hw['latch'] = int(parts[-1][1:])      # 新固件末字段（L 前缀）
     return True
 
 

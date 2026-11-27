@@ -63,20 +63,22 @@ def main():
     print('\n[5] 状态帧解析（新旧固件兼容）')
     from host_app import parse_status_frame
     base = '$' + ','.join(str(i) for i in range(12)) + ',5,1,0'
-    for name, tail, exp_latch in [
-        ('旧15字段', '', 0),
-        ('旧急停16字段', ',1', 0),
-        ('新16字段锁存', ',L3', 3),
-        ('新急停17字段', ',1,L12', 12),
+    for name, tail, exp_latch, exp_estop in [
+        ('旧15字段', '', 0, 0),
+        ('旧急停16字段', ',1', 0, 1),
+        ('新16字段锁存', ',L3', 3, 0),
+        ('新急停17字段', ',1,L12', 12, 1),
     ]:
         hw = {'limit': 0, 'enabled': 0, 'watchdog': 0, 'latch': 0, 'frames': 0,
-              'cur': [], 'tgt': []}
+              'cur': [], 'tgt': [], 'estop': 0}
         ok = parse_status_frame(base + tail, hw)
         check(name, ok and hw['limit'] == 5 and hw['enabled'] == 1
-              and hw['latch'] == exp_latch and hw['cur'] == list(range(6))
+              and hw['latch'] == exp_latch and hw['estop'] == exp_estop
+              and hw['cur'] == list(range(6))
               and hw['tgt'] == list(range(6, 12)),
-              'limit=%d enabled=%d latch=%d cur0=%d tgt0=%d'
-              % (hw['limit'], hw['enabled'], hw['latch'], hw['cur'][0], hw['tgt'][0]))
+              'limit=%d enabled=%d latch=%d estop=%d cur0=%d tgt0=%d'
+              % (hw['limit'], hw['enabled'], hw['latch'], hw['estop'],
+                 hw['cur'][0], hw['tgt'][0]))
     check('非$帧忽略', not parse_status_frame('garbage', {'latch': 0}))
 
     print('\n[6] 录制日志分析（新增实际位置列）')
