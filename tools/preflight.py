@@ -46,6 +46,11 @@ def main():
     line = [l for l in out.splitlines() if '结果:' in l]
     checks.append(('协议/换算测试(15项)', ok, line[-1] if line else '无输出'))
 
+    # 2c. Web/WS 接口测试
+    ok, out = run([PY, 'tests/test_web.py'])
+    line = [l for l in out.splitlines() if '结果:' in l]
+    checks.append(('Web/WS接口测试(5项)', ok, line[-1] if line else '无输出'))
+
     # 3. 上位机自检
     ok, out = run([PY, 'host_app.py', '--check'])
     checks.append(('上位机自检', ok, '映射/帧格式 OK' if ok else '失败'))
