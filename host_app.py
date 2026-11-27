@@ -92,12 +92,27 @@ wifi_sock = None
 _rx_buf = b''
 
 
+NUM_AXES = 6   # 6 缸固定帧长，与固件一致
+
+
 def build_frame(disp_mm):
+    """6缸位移(mm) → <FF FF>+6×uint16 大端帧。
+
+    对输入做最终防线净化：非有限值→0mm，超程→钳位到±95mm，长度不足补中位。
+    防止 Web 自定义输入/异常遥测产生 0xFFFF 数据字节（会被误判为帧头）
+    或 NaN 导致整型转换异常终止发送线程。
+    """
     from G_chair_sim.controller import DualBoardController
     ctl = DualBoardController()
+    vals = list(disp_mm)[:NUM_AXES]
+    vals += [0.0] * (NUM_AXES - len(vals))
     f = bytearray([255, 255])
-    for d in disp_mm:
-        v = ctl.board1.displacement_to_flypt_16bit(float(d))
+    for d in vals:
+        x = float(d)
+        if not np.isfinite(x):
+            x = 0.0
+        x = float(np.clip(x, -95.0, 95.0))
+        v = int(ctl.board1.displacement_to_flypt_16bit(x))
         f += bytes([(v >> 8) & 0xFF, v & 0xFF])
     return bytes(f)
 

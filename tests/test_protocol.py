@@ -55,6 +55,12 @@ def main():
     dec = [(f[2+2*k] << 8) | f[3+2*k] for k in range(6)]
     check('大端', dec[0] == ctl.board1.displacement_to_flypt_16bit(10.0))
 
+    # 最终防线：超程/NaN/短列表都不能产出畸形帧
+    from host_app import build_frame
+    check('超程钳位到+95mm', build_frame([1000] * 6)[2:4] == b'\xfe\xaa')
+    check('NaN归零中位', build_frame([float('nan')] * 6)[2:4] == b'\x80\x00')
+    check('短列表补中位', len(build_frame([1, 2, 3])) == 14)
+
     print('\n[4] 25通道定义')
     check('通道数25', len(TELEMETRY_CHANNELS) == 25, '%d' % len(TELEMETRY_CHANNELS))
     check('关键通道顺序', TELEMETRY_CHANNELS[:3] == ['accel_x', 'accel_z', 'accel_y']
