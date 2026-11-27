@@ -39,7 +39,7 @@ def main():
     # 2. 健壮性测试
     ok, out = run([PY, 'tests/test_robustness.py'])
     line = [l for l in out.splitlines() if '结果:' in l]
-    checks.append(('健壮性测试(17项)', ok, line[-1] if line else '无输出'))
+    checks.append(('健壮性测试(18项)', ok, line[-1] if line else '无输出'))
 
     # 3. 上位机自检
     ok, out = run([PY, 'host_app.py', '--check'])

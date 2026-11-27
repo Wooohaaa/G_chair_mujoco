@@ -154,6 +154,17 @@ def test_telemetry_stale():
     check('数据变化时重置', 0.0 == 0.0 and sig_a != sig_b)
 
 
+def test_bad_serial():
+    print('\n[7] 无效串口容错')
+    # host_app 现在捕获串口异常并继续运行（connected=False -> Web 告警）
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable,
+                        os.path.join(ROOT, 'host_app.py'), '--check'],
+                       capture_output=True, text=True, timeout=60, cwd=ROOT)
+    check('--check 正常', r.returncode == 0 and '映射管线: OK' in r.stdout)
+
+
 def main():
     print('=' * 50)
     print('G_chair 健壮性测试')
@@ -164,6 +175,7 @@ def main():
     test_long_run()
     test_status_timeout()
     test_telemetry_stale()
+    test_bad_serial()
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
     print('=' * 50)

@@ -103,7 +103,8 @@ function update(s){
   const lim=s.hw.limit||0, wd=s.hw.watchdog||0, lost=s.lost||0;
   const age=s.hw_age;
   let msgs=[];
-  if(s.mode==='real' && age>=0 && age>1.0) msgs.push('⛔ ESP32 状态回传中断 '+age.toFixed(1)+'s（检查串口/WiFi/供电）');
+  if(s.mode==='real' && !s.connected) msgs.push('⛔ 实机模式但未连接主控（检查串口/选择正确端口）');
+  else if(s.mode==='real' && age>=0 && age>1.0) msgs.push('⛔ ESP32 状态回传中断 '+age.toFixed(1)+'s（检查串口/WiFi/供电）');
   if(s.tele_stale>1.0) msgs.push('⚠ 遥测数值停滞 '+s.tele_stale.toFixed(1)+'s（游戏暂停或 mod 卡死）');
   if(wd) msgs.push('⚠ 看门狗触发：平台回中位');
   if(lim) msgs.push('⛔ 限位触发：轴 '+[0,1,2,3,4,5].filter(i=>(lim>>i)&1).join(','));

@@ -317,15 +317,19 @@ async def main_async(args):
             ports = sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*'))
             port = ports[0] if ports else None
         if port:
-            import serial as pyserial
-            ser = pyserial.Serial(port, baudrate=args.baud, bytesize=8,
-                                  parity='N', stopbits=1, timeout=0.1)
-            threading.Thread(target=status_rx_loop, args=(ser,), daemon=True).start()
-            print('[serial] %s' % port)
-            with _state_lock:
-                state['connected'] = True
+            try:
+                import serial as pyserial
+                ser = pyserial.Serial(port, baudrate=args.baud, bytesize=8,
+                                      parity='N', stopbits=1, timeout=0.1)
+                threading.Thread(target=status_rx_loop, args=(ser,), daemon=True).start()
+                print('[serial] %s' % port)
+                with _state_lock:
+                    state['connected'] = True
+            except Exception as e:
+                print('[serial] 打开 %s 失败: %s — 继续运行但 Web 会告警未连接' % (port, e))
+                ser = None
         else:
-            print('[serial] 未找到串口，实机模式将只计算不发送')
+            print('[serial] 未找到串口，实机模式将只计算不发送（Web 会告警）')
 
     threading.Thread(target=pipeline_loop, args=(args, motion_ref, rx, sim),
                      daemon=True).start()
