@@ -165,6 +165,20 @@ def main():
           '固件=%.7f 上位机=%.7f' % (macro('MAP_DIVISOR'), DIV))
     check('时序常量一致', macro('WATCHDOG_MS') == 500.0
           and macro('SAMPLE_PERIOD_US') == 4000.0)
+    check('行程/脉冲周期一致', macro('XINGCHENG_MM') == 192.0
+          and macro('MIN_PULSE_PERIOD_US') == 39.0
+          and macro('MAX_PULSE_PERIOD_US') == 4000.0)
+    check('串口波特率一致', macro('SERIAL_BAUD') == 115200.0)
+    wifi_hdr = open(os.path.join(ROOT, 'G_chair_esp32', 'include', 'wifi_config.h'),
+                    encoding='utf-8').read()
+    import re
+    wport = re.search(r'#define\s+WIFI_UDP_PORT\s+(\d+)', wifi_hdr)
+    host_src = open(os.path.join(ROOT, 'host_app.py'), encoding='utf-8').read()
+    hport = re.search(r"esp32-udp'.*?default=(\d+)", host_src)
+    check('WiFi UDP端口一致', bool(wport) and bool(hport)
+          and int(wport.group(1)) == int(hport.group(1)),
+          '固件=%s 上位机=%s' % (wport.group(1) if wport else '?',
+                              hport.group(1) if hport else '?'))
 
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
