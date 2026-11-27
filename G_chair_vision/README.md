@@ -127,6 +127,8 @@ python3 analyze_paired.py --vision video_telemetry.csv \
   PC 实测 2× 提速（100→208 FPS），RK3566 预计 ~24 FPS。
   **注意**：光流幅值会变，必须重新标定增益；真实视频实测 accel 范围仍正常（±0.8G）。
   用法：`screen_telemetry.py --fast`，或 `--proc-size 256x144` 单独改分辨率。
+  重标定：用 `analyze_paired.py` 对比 fast 模式输出与真实遥测，相关性足够高时
+  会直接给出各增益的建议值（相关性弱时拒绝给建议，避免误导）。
 - PC 上轻松 100 FPS，完全实时。
 - 传输不是瓶颈：25 个浮点约 200 字节，PC 本地环回延迟 P50 0.1ms / P95 0.5ms；
   ADB-TCP 转发实测 241 包 0 丢包（之前验证），传输延迟 <1ms，远小于处理时间。

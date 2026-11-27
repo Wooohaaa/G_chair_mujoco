@@ -119,6 +119,29 @@ def analyze(vision_path, truth_path, dt=0.02):
     for k, (_, _, _, corr, _) in sorted(results.items(), key=lambda x: x[1][3])[:3]:
         print('  %s: 相关系数 %.3f' % (k, corr))
 
+    # 给出可执行的增益建议：相关性够高时，按幅值比的倒数缩放 motion_map 增益
+    print('\n=== 增益重标定建议（供 --fast 模式/换分辨率后使用）===')
+    gain_map = {'accel_x': ['roll', 'sway'],
+                'accel_z': ['pitch', 'surge'],
+                'accel_y': ['heave'],
+                'rot_y': ['yaw']}
+    defaults = {'roll': 35.0, 'pitch': 30.0, 'yaw': 10.0,
+                'sway': 100.0, 'surge': -100.0, 'heave': 50.0}
+    any_tip = False
+    for k, gains in gain_map.items():
+        if k not in results:
+            continue
+        _, _, ratio, corr, _ = results[k]
+        if corr > 0.5 and ratio > 0.2:
+            factor = 1.0 / ratio
+            for g in gains:
+                new = defaults[g] * factor
+                print('  %s 幅值比 %.2f (相关 %.2f) → %s 增益 %.1f → %.1f' %
+                      (k, ratio, corr, g, defaults[g], new))
+            any_tip = True
+    if not any_tip:
+        print('  相关性不足或幅值异常，暂不建议自动调增益（先改算法/分辨率）')
+
     # 画图
     try:
         import matplotlib
