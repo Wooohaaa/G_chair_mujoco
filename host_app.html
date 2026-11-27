@@ -54,6 +54,22 @@
 </div>
 
 <div class="card">
+  <h2>手动姿态测试（绕过遥测，直接驱动 6 缸）</h2>
+  <button onclick="cmd('preset',{name:'neutral'})">中位</button>
+  <button onclick="cmd('preset',{name:'heave_up'})">升沉+</button>
+  <button onclick="cmd('preset',{name:'heave_dn'})">升沉−</button>
+  <button onclick="cmd('preset',{name:'roll_l'})">左倾</button>
+  <button onclick="cmd('preset',{name:'roll_r'})">右倾</button>
+  <button onclick="cmd('preset',{name:'pitch_up'})">抬头</button>
+  <button onclick="cmd('preset',{name:'pitch_dn'})">低头</button>
+  <button onclick="cmd('preset',{name:'yaw_l'})">左转</button>
+  <button onclick="cmd('preset',{name:'yaw_r'})">右转</button>
+  <button class="warn" onclick="cmd('estop')" style="margin-left:12px">⛔ 急停回中</button>
+  <button onclick="cmd('release')" style="background:#374151;margin-left:8px">恢复遥测控制</button>
+  <div class="legend">手动指令会保持直到点"恢复遥测控制"；急停=保持中位。行程±95mm</div>
+</div>
+
+<div class="card">
   <h2>录制 / 复位</h2>
   <button onclick="cmd('record_start')">● 开始录制</button>
   <button onclick="cmd('record_stop')">■ 停止并保存 CSV</button>
@@ -113,7 +129,8 @@ function update(s){
   if(msgs.length){ alarm.style.display='block'; alarm.textContent=msgs.join(' | '); }
   else { alarm.style.display='none'; }
   document.getElementById('top').innerHTML =
-    '<b>模式:</b> '+s.mode+' &nbsp; <b>帧数:</b> '+s.frames+' &nbsp; <b>断流帧:</b> '+s.lost+
+    '<b>模式:</b> '+s.mode+' &nbsp; <b>控制源:</b> '+(s.manual_disp?'<span class="warnc">手动保持</span>':'遥测')+
+    ' &nbsp; <b>帧数:</b> '+s.frames+' &nbsp; <b>断流帧:</b> '+s.lost+
     ' &nbsp; <b>串口:</b> '+(s.connected?'已连接':'未连接')+
     ' &nbsp; <b>状态帧:</b> '+s.hw.frames;
   const hw=s.hw;

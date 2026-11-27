@@ -50,6 +50,7 @@ state = {
     'tele_stale': 0.0,       # 遥测数值停滞时长(秒)，检测游戏暂停/mod卡死
     'params': {},
     'recording': False,
+    'manual_disp': None,   # 手动测试：设为 [6缸位移mm] 时绕过映射直接输出
 }
 _state_lock = threading.Lock()
 _rec_log = []
@@ -138,7 +139,13 @@ def pipeline_loop(args, motion, rx, sim):
                     state['tele_stale'] = 0.0
             _last_sig = sig
 
-        pose, disp = motion.pose_and_disp(tele, DT)
+        # 手动姿态测试优先：一旦设置就保持，直到 Web 点"恢复遥测"清空
+        manual = state.get('manual_disp')
+        if manual is not None:
+            disp = np.array(manual, dtype=float)
+            pose = np.zeros(6)
+        else:
+            pose, disp = motion.pose_and_disp(tele, DT)
         lim = np.clip(disp, -95, 95)
 
         if args.mode == 'real' and args.output == 'wifi' and wifi_sock is not None:
@@ -221,6 +228,33 @@ async def ws_handler(websocket):
                                                      'yaw': 10.0, 'sway': 100.0})
                     state['params'] = p
                     save_tuning(p)
+            elif cmd == 'preset':
+                name = d.get('name')
+                presets = {
+                    'neutral': [0] * 6,
+                    'heave_up': [0, 0, 30, 0, 0, 0],
+                    'heave_dn': [0, 0, -30, 0, 0, 0],
+                    'roll_l': [0, 0, 0, 5, 0, 0],
+                    'roll_r': [0, 0, 0, -5, 0, 0],
+                    'pitch_up': [0, 0, 0, 0, 5, 0],
+                    'pitch_dn': [0, 0, 0, 0, -5, 0],
+                    'yaw_l': [0, 0, 0, 0, 0, 6],
+                    'yaw_r': [0, 0, 0, 0, 0, -6],
+                }
+                if name in presets:
+                    with _state_lock:
+                        state['manual_disp'] = presets[name][:]
+            elif cmd == 'manual_mm':
+                disp = d.get('disp')
+                if disp and len(disp) == 6:
+                    with _state_lock:
+                        state['manual_disp'] = [float(x) for x in disp]
+            elif cmd == 'estop':
+                with _state_lock:
+                    state['manual_disp'] = [0] * 6
+            elif cmd == 'release':
+                with _state_lock:
+                    state['manual_disp'] = None
     finally:
         pusher.cancel()
 
