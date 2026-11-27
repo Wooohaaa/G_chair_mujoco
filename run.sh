@@ -18,6 +18,7 @@ usage() {
   test-web     运行 Web/WS 接口测试(5项: 手动/调参/录制)"
   echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)
   report       全量验证并存成带时间戳的报告文件
+  doctor       环境诊断(依赖/串口/ADB/GitHub DNS)
   fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)
   fullchain    全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)
   preflight    上实机前 GO/NO-GO 检查汇总 + 人工清单
@@ -79,6 +80,9 @@ case "$CMD" in
     ;;
   report)
     exec "$PY" "$HERE/tools/save_report.py"
+    ;;
+  doctor)
+    exec "$PY" "$HERE/tools/doctor.py"
     ;;
   deploy-board)
     exec bash "$HERE/deploy_board.sh"
