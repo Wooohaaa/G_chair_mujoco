@@ -62,9 +62,10 @@ SYSTEM_OVERVIEW.md        系统地图
 HOST_APP.md               一键上位机（监控+调参+回放）
 STATUS.md                 本文：状态快照
 tests/test_chain.py       19 项链路测试
-tests/test_robustness.py   17 项健壮性测试
+tests/test_robustness.py   18 项健壮性测试
 tools/preflight.py        上实机前 GO/NO-GO 汇总
 tools/full_chain_sim.py   全链路数值仿真
+tools/analyze_run.py      录制日志分析 + --compare 调参前后对比
 G_chair_esp32/tests/firmware_sim.py  固件步进逻辑仿真
 PROTOCOL.md               线格式/单位/时序唯一权威参考
 motion_pipeline.py        共用映射核心（set_params 可在线调参）
