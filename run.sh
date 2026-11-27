@@ -13,7 +13,7 @@ usage() {
   echo "  host-wifi    启动上位机(实机模式，WiFi UDP)"
   echo "  panel        启动独立调试面板(手动姿态测试)"
   echo "  test         运行全链路回归测试(19项)"
-  echo "  test-robust  运行健壮性测试(12项: 断流/异常/边界/长跑)"
+  echo "  test-robust  运行健壮性测试(17项: 断流/异常/边界/长跑/掉线/停滞)"
   echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)
   fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)
   fullchain    全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)

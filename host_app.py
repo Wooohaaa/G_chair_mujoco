@@ -47,6 +47,7 @@ state = {
     'lost': 0, 'frames': 0,
     'hw': {'limit': 0, 'enabled': 0, 'watchdog': 0, 'frames': 0},
     'hw_last_status': 0.0,   # 最近一帧状态回传的时间，用于检测主控掉线
+    'tele_stale': 0.0,       # 遥测数值停滞时长(秒)，检测游戏暂停/mod卡死
     'params': {},
     'recording': False,
 }
@@ -106,6 +107,7 @@ def status_rx_loop(port):
 # ---------------- 数据链主循环（后台线程） ----------------
 def pipeline_loop(args, motion, rx, sim):
     have_signal = False
+    _last_sig = None
     next_t = time.time()
     with _state_lock:
         state['params'] = motion.get_params()
@@ -116,12 +118,25 @@ def pipeline_loop(args, motion, rx, sim):
             if have_signal:
                 motion.reset()
                 have_signal = False
+            _last_sig = None
+            with _state_lock:
+                state['tele_stale'] = 0.0
             tele = zero_telemetry()
             with _state_lock:
                 state['lost'] += 1
         else:
             tele = item[0]
             have_signal = True
+            # 检测遥测数值停滞（游戏暂停 / mod 卡死）：运动通道全相同则累加时长
+            sig = tuple(round(float(tele.get(k, 0.0)), 4) for k in
+                        ('accel_x', 'accel_z', 'accel_y', 'rot_y', 'rot_x', 'rot_z'))
+            if sig == _last_sig:
+                with _state_lock:
+                    state['tele_stale'] += DT
+            else:
+                with _state_lock:
+                    state['tele_stale'] = 0.0
+            _last_sig = sig
 
         pose, disp = motion.pose_and_disp(tele, DT)
         lim = np.clip(disp, -95, 95)
@@ -163,6 +178,7 @@ async def ws_handler(websocket):
                     # 主控状态回传年龄（秒）：掉线时不再更新，前端据此告警
                     snap['hw_age'] = (round(time.time() - state['hw_last_status'], 2)
                                       if state['hw_last_status'] > 0 else -1)
+                    snap['tele_stale'] = round(state['tele_stale'], 2)
                 await websocket.send(json.dumps(snap))
             except Exception:
                 break

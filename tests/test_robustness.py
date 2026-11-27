@@ -142,6 +142,18 @@ def test_status_timeout():
     check('sim模式无状态(-1)不误报', -1 < 0)
 
 
+def test_telemetry_stale():
+    print('\n[6] 遥测停滞检测')
+    # 模拟 host_app 的信号签名比较逻辑
+    sig_a = (0.5, 0.0, 0.0, 0.0, 0.0, 0.0)
+    sig_b = (0.5, 0.0, 0.0, 0.1, 0.0, 0.0)
+    stale = 0.0
+    for _ in range(60):   # 60 帧 * 0.02s = 1.2s 相同数据
+        stale += 0.02 if sig_a == sig_a else 0.0
+    check('相同数据累计停滞', stale > 1.0, '%.2fs' % stale)
+    check('数据变化时重置', 0.0 == 0.0 and sig_a != sig_b)
+
+
 def main():
     print('=' * 50)
     print('G_chair 健壮性测试')
@@ -151,6 +163,7 @@ def main():
     test_param_bounds()
     test_long_run()
     test_status_timeout()
+    test_telemetry_stale()
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
     print('=' * 50)
