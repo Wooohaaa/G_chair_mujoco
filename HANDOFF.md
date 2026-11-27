@@ -61,10 +61,13 @@
 
 修复（已在本机执行，未来换机器若重现照做）：
 ```bash
-echo 100200 | sudo -S sh -c 'grep -q "20.205.243.166 github.com" /etc/hosts || \
-  echo "20.205.243.166 github.com" >> /etc/hosts'
-getent hosts github.com     # 应显示 20.205.243.166
+echo 100200 | sudo -S sh -c 'grep -q "github.com" /etc/hosts || \
+  echo "140.82.112.3 github.com" >> /etc/hosts'
+getent hosts github.com     # 应显示 140.82.112.3
 git push origin master
+
+# 若该 IP 也不通，换另一个：
+# echo 100200 | sudo -S sed -i 's/140.82.112.3 github.com/140.82.114.3 github.com/' /etc/hosts
 ```
 
 诊断方法：
