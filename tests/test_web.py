@@ -44,10 +44,12 @@ def main():
     if os.path.exists(tuning):
         backup = open(tuning).read()
 
+    env = dict(os.environ)
+    env['GCHAIR_LOG_PATH'] = '/tmp/opencode/web_test_log.csv'  # 不污染真实日志
     proc = subprocess.Popen([PY, os.path.join(ROOT, 'host_app.py'),
                              '--mode', 'sim', '--mock', '--port', str(PORT)],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                            cwd=ROOT)
+                            cwd=ROOT, env=env)
     try:
         time.sleep(3)
         async def t():

@@ -295,9 +295,11 @@ async def ws_handler(websocket):
 def save_log():
     if not _rec_log:
         return
-    out_dir = os.path.join(HERE, 'output')
+    # 支持环境变量覆盖输出路径（测试用，避免污染真实日志）
+    path = os.environ.get('GCHAIR_LOG_PATH',
+                          os.path.join(HERE, 'output', 'host_app_log.csv'))
+    out_dir = os.path.dirname(os.path.abspath(path))
     os.makedirs(out_dir, exist_ok=True)
-    path = os.path.join(out_dir, 'host_app_log.csv')
     header = (','.join(['t'] + ['leg%d' % i for i in range(6)] +
                        ['pose%d' % i for i in range(6)] +
                        ['speed%d' % i for i in range(6)]))
