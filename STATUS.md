@@ -19,7 +19,7 @@
 | real+serial 完整闭环 | ✅ 实测 | 虚拟串口模拟 ESP32：209 帧、使能=1、状态回传 209 帧、6缸位移正常 |
 | real+wifi 输出 | ✅ 实测 | 6 秒 245 帧 UDP，帧长 14、帧头 ffff |
 | 调试面板 | ✅ 实测 | 虚拟串口闭环，帧格式正确，状态回传解析正确 |
-| 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 12 PASS |
+| 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 17 PASS |
 | 视觉→上位机端到端 | ✅ 实测 | mock 视觉 UDP → 上位机 → MuJoCo，251帧0断流 |
 | WiFi UDP 模式 | ✅ 编译+模拟 | 上位机 `--output wifi` 6秒发245帧；板子 WiFi 版编译通过 |
 | 文档体系 | ✅ | 12+ 份 md，索引见 `SYSTEM_OVERVIEW.md` |
@@ -62,7 +62,11 @@ SYSTEM_OVERVIEW.md        系统地图
 HOST_APP.md               一键上位机（监控+调参+回放）
 STATUS.md                 本文：状态快照
 tests/test_chain.py       19 项链路测试
-tests/test_robustness.py   12 项健壮性测试
+tests/test_robustness.py   17 项健壮性测试
+tools/preflight.py        上实机前 GO/NO-GO 汇总
+tools/full_chain_sim.py   全链路数值仿真
+G_chair_esp32/tests/firmware_sim.py  固件步进逻辑仿真
+PROTOCOL.md               线格式/单位/时序唯一权威参考
 motion_pipeline.py        共用映射核心（set_params 可在线调参）
 G_chair_esp32/            固件 + 4 份硬件文档（BOARD_SPEC/MINIMAL_SETUP/POWERON_CHECKLIST/WIFI_MODE）
 G_chair_vision/           RK3566 视觉节点 + 性能基准

@@ -28,10 +28,10 @@
 
 | 事实 | 值 |
 |---|---|
-| 最后提交 | `c3fe014`（2026-11-26 22:47） |
+| 最后提交 | 见 git log（每次提交后更新） |
 | 工作区状态 | 干净、已同步；`./run.sh verify` 一键输出全部健康证据 |
 | 新增工具 | `host_app.py --check`（启动自检）、`tools/analyze_run.py`（录制分析 + `--compare` 调参前后对比） |
-| 测试 | 链路 19 PASS + 健壮性 12 PASS + MuJoCo 校验 PASS |
+| 测试 | 链路 19 PASS + 健壮性 17 PASS + MuJoCo 校验 PASS |
 | 固件 | 串口/WiFi/急停三版编译 SUCCESS |
 | 唯一未完成 | **实物单缸测试**（3.3V 直连伺服是否可行） |
 
