@@ -119,6 +119,12 @@ function update(s){
   h+='<div><span class="kv">看门狗</span><span class="'+(hw.watchdog?'bad':'ok')+'">'+(hw.watchdog?'回中位':'正常')+'</span></div>';
   h+='<div><span class="kv">状态龄</span><span class="'+((age>1.0)?'bad':'ok')+'">'+(age>=0?age.toFixed(2)+'s':'—')+'</span></div>';
   h+='<div><span class="kv">限位</span>'+[0,1,2,3,4,5].map(i=>'<span class="'+((hw.limit>>i)&1?'bad':'')+'">'+(i)+':'+((hw.limit>>i)&1?'触':'·')+' </span>').join('')+'</div>';
+  h+='<div style="margin-top:6px"><b>平台位姿</b></div>';
+  const p=s.pose||[0,0,0,0,0,0];
+  h+='<div><span class="kv">升沉</span>'+(p[2]*1000).toFixed(1)+' mm</div>';
+  h+='<div><span class="kv">roll</span>'+(p[3]*180/Math.PI).toFixed(2)+'°</div>';
+  h+='<div><span class="kv">pitch</span>'+(p[4]*180/Math.PI).toFixed(2)+'°</div>';
+  h+='<div><span class="kv">yaw</span>'+(p[5]*180/Math.PI).toFixed(2)+'°</div>';
   h+='<div style="margin-top:6px"><b>缸 实际mm / 速度mm/s</b></div>';
   for(let i=0;i<6;i++){
     const sp=s.speed[i]||0;
