@@ -161,8 +161,31 @@ def test_limit_latch():
     assert unlocked
 
 
+def test_manual_hold():
+    print('\n=== 5. #J 手动点动看门狗保持 ===')
+    WATCHDOG_MS = 500
+    enabled = True
+    last_frame_ms = 0          # 无上位机帧
+    manual_hold_until = 10000  # #J0,300 后设定
+    selftest_active = False
+
+    def watchdog(now_ms):
+        return (not selftest_active and now_ms >= manual_hold_until
+                and enabled and now_ms - last_frame_ms > WATCHDOG_MS)
+
+    assert not watchdog(600), '手动保持期内不应回中位'
+    print('  t=600ms 保持期内 -> 不回中位 ✓')
+    assert not watchdog(9900), '保持到期前不应回中位'
+    manual_hold_until = 0      # 上位机帧接管
+    assert watchdog(1000), '收到上位机帧后应立即恢复看门狗'
+    print('  上位机接管 -> 看门狗恢复 ✓')
+    manual_hold_until = 10000
+    assert watchdog(10100), '10s上限到期后应恢复看门狗'
+    print('  t=10100ms 超过10s上限 -> 看门狗恢复 ✓')
+
+
 def test_replay(csv_path):
-    print('\n=== 4. 回放上位机日志，预测电缸运动 ===')
+    print('\n=== 6. 回放上位机日志，预测电缸运动 ===')
     if not os.path.exists(csv_path):
         print('  跳过（无 %s）' % csv_path)
         return
@@ -196,6 +219,7 @@ def main():
     test_speed_limit()
     test_decel()
     test_limit_latch()
+    test_manual_hold()
     log = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
         ROOT, 'output', 'host_app_log.csv')
     test_replay(log)

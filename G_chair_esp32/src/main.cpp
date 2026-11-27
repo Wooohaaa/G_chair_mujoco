@@ -154,6 +154,7 @@ static uint16_t frame[NUM_AXES];
 static int header_count = 0, byte_idx = 0;
 static uint16_t acc = 0;
 static unsigned long last_frame_ms = 0;
+static unsigned long manual_hold_until = 0;  // #J 手动点动保持截止时间(10s上限)
 static bool enabled = false;
 
 void parse_byte(uint8_t b) {   // wifi_udp.h 在 USE_WIFI 模式下 extern 引用
@@ -184,6 +185,7 @@ void parse_byte(uint8_t b) {   // wifi_udp.h 在 USE_WIFI 模式下 extern 引�
                 move_axis(i, target);
             }
             last_frame_ms = millis();
+            manual_hold_until = 0;   // 上位机接管，退出手动点动保持
             if (!enabled) { enable_drivers(true); enabled = true; }
             header_count = 0; byte_idx = 0;
         }
@@ -220,6 +222,7 @@ static void handle_text_cmd(const String &c) {
         Serial.println("CMD: #T=selftest  #N=neutral  #E=enable  #D=disable");
         Serial.println("     #J<axis>,<steps> e.g. #J0,300 (=+1.5mm on axis0)");
     } else if (c == "#N") {
+        manual_hold_until = 0;
         enable_drivers(true); enabled = true;
         go_neutral();
         Serial.println("OK neutral");
@@ -227,6 +230,7 @@ static void handle_text_cmd(const String &c) {
         enable_drivers(true); enabled = true;
         Serial.println("OK enable");
     } else if (c == "#D") {
+        manual_hold_until = 0;
         enable_drivers(false); enabled = false;
         for (int i = 0; i < NUM_AXES; i++) rmt_stop(axes[i]);
         Serial.println("OK disable");
@@ -242,6 +246,9 @@ static void handle_text_cmd(const String &c) {
                 long target = CENTER_POS_STEPS + steps;
                 target = max(0L, min((long)MAX_POS_STEPS, target));
                 move_axis(axis, target);
+                // 无上位机帧时，看门狗会在500ms后回中位；手动点动期间暂缓，
+                // 最多保持10s（安全上限），收到上位机帧/#N/#D 立即退出。
+                manual_hold_until = millis() + 10000UL;
                 Serial.printf("OK jog axis%d -> %ld steps (%.2fmm)\n",
                               axis, target, (target - CENTER_POS_STEPS) * 0.005);
             } else {
@@ -333,8 +340,10 @@ void loop() {
 
     selftest_loop();   // 非阻塞自检（保证 update_axis 持续运行）
 
-    // 自检期间跳过看门狗（自检本身不依赖上位机帧）
-    if (!selftest_active && enabled && millis() - last_frame_ms > WATCHDOG_MS) go_neutral();
+    // 自检 / 手动点动期间跳过看门狗（均不依赖上位机帧）
+    bool manual_hold = (millis() < manual_hold_until);
+    if (!selftest_active && !manual_hold && enabled &&
+        millis() - last_frame_ms > WATCHDOG_MS) go_neutral();
 
     // 状态回传：每 50ms 发一帧文本，供调试面板实时显示。
     // 格式: $cur0,cur1,...,cur5,tgt0,...,tgt5,limitMask,enabled,watchdog\n
@@ -350,7 +359,8 @@ void loop() {
             if (digitalRead(PIN_LIMIT[i]) == LOW) limitMask |= (1 << i);
             if (axes[i].limitLatch != 0) latchMask |= (1 << i);
         }
-        byte wd = (enabled && (millis() - last_frame_ms > WATCHDOG_MS)) ? 1 : 0;
+        byte wd = (enabled && !selftest_active && millis() >= manual_hold_until &&
+                   (millis() - last_frame_ms > WATCHDOG_MS)) ? 1 : 0;
         // 一次写入，避免多次 Serial.print 造成 loop 阻塞（P0-2：保持脉冲计数准确）
         char buf[160];
         int n = snprintf(buf, sizeof(buf), "$%ld,%ld,%ld,%ld,%ld,%ld,"
