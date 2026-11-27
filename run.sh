@@ -14,17 +14,17 @@ usage() {
   echo "  panel        启动独立调试面板(手动姿态测试)"
   echo "  test         运行全链路回归测试(19项)"
   echo "  test-robust  运行健壮性测试(18项: 断流/异常/边界/长跑/掉线/停滞)"
-  echo "  test-proto   运行协议/换算测试(22项: 中位精度/帧格式/状态帧兼容/日志分析)
-  test-web     运行 Web/WS 接口测试(6项: 手动/调参/录制/WiFi状态帧)"
-  echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)
-  report       全量验证并存成带时间戳的报告文件
-  doctor       环境诊断(依赖/串口/ADB/GitHub DNS)
-  fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)
-  fullchain    全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)
-  preflight    上实机前 GO/NO-GO 检查汇总 + 人工清单
-  deploy-board 推送最新视觉节点到 RK3566 (需 ADB 连接)"
-  echo "  record       录制原始 UDP 遥测到 CSV (第2参数为秒数, 默认60)
-  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)"
+  echo "  test-proto   运行协议/换算测试(22项: 中位精度/帧格式/状态帧兼容/日志分析)"
+  echo "  test-web     运行 Web/WS 接口测试(6项: 手动/调参/录制/WiFi状态帧)"
+  echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)"
+  echo "  report       全量验证并存成带时间戳的报告文件"
+  echo "  doctor       环境诊断(依赖/串口/ADB/GitHub DNS)"
+  echo "  fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)"
+  echo "  fullchain    全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)"
+  echo "  preflight    上实机前 GO/NO-GO 检查汇总 + 人工清单"
+  echo "  deploy-board 推送最新视觉节点到 RK3566 (需 ADB 连接)"
+  echo "  record       录制原始 UDP 遥测到 CSV (第2参数为秒数, 默认60)"
+  echo "  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)"
   echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
   echo "  validate     运行 MuJoCo 静态校验"
   echo "  simulate     用真实视频录制 MuJoCo 对比视频"
