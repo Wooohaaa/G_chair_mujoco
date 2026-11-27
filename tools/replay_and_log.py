@@ -36,18 +36,23 @@ def main():
         print('找不到 %s' % src)
         return 1
 
+    with open(src, encoding='utf-8', errors='ignore') as f:
+        header = f.readline().strip().split(',')
+    # capture_raw.py 输出25列(无t)，record_paired.py 输出26列(t在首列)
+    offset = 1 if header and header[0].strip() == 't' else 0
     data = np.loadtxt(src, delimiter=',', skiprows=1)
     if data.ndim == 1:
         data = data.reshape(1, -1)
-    if data.shape[1] < len(TELEMETRY_CHANNELS):
-        print('字段数不足: 需要%d列, 实际%d列' % (len(TELEMETRY_CHANNELS), data.shape[1]))
+    if data.shape[1] < offset + len(TELEMETRY_CHANNELS):
+        print('字段数不足: 需要%d列, 实际%d列' % (offset + len(TELEMETRY_CHANNELS),
+                                              data.shape[1]))
         return 1
 
     mp = MotionPipeline()
     rows = []
     prev = None
     for i, row in enumerate(data[:limit]):
-        tele = {k: float(row[j]) for j, k in enumerate(TELEMETRY_CHANNELS)}
+        tele = {k: float(row[offset + j]) for j, k in enumerate(TELEMETRY_CHANNELS)}
         pose, disp = mp.pose_and_disp(tele, DT)
         speed = [0.0] * 6 if prev is None else [abs(float(a) - b) / DT
                                                 for a, b in zip(disp, prev)]

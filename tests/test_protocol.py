@@ -162,6 +162,18 @@ def main():
               and '回放' in r1.stdout and '平均' in r2.stdout
               and r3.returncode != 0 and '原始遥测CSV' in r3.stdout,
               r1.stdout.strip()[:40])
+        # record_paired.py 格式：首列为 t，后接25通道
+        raw_t = os.path.join(td, 'raw_t.csv')
+        with open(raw_t, 'w') as f:
+            f.write('t,' + ','.join(TELEMETRY_CHANNELS) + '\n')
+            np.savetxt(f, np.column_stack([np.arange(len(data)) * 0.02,
+                                           data[:, :25]]),
+                       delimiter=',', comments='', fmt='%.6f')
+        log_t = os.path.join(td, 'log_t.csv')
+        r4 = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'replay_and_log.py'),
+                             raw_t, log_t], capture_output=True, text=True)
+        check('带t列遥测兼容', r4.returncode == 0 and '回放' in r4.stdout
+              and os.path.exists(log_t))
 
     print('\n[8] 上位机 ↔ 固件常量一致性（静态扫描 config.h）')
     cfg_path = os.path.join(ROOT, 'G_chair_esp32', 'include', 'config.h')
