@@ -97,8 +97,13 @@ class Washout:
 class VisionMotion:
     """光流 + 可选 YOLO 语义 → 6DOF 运动代理"""
 
-    def __init__(self, use_yolo=False, model_path=None, debug_dir=None):
+    def __init__(self, use_yolo=False, model_path=None, debug_dir=None,
+                 fast_flow=False, proc_size=None):
         self.use_yolo = use_yolo
+        self.fast_flow = fast_flow
+        # 轻量光流参数（板子上 ~24FPS，默认保真用原参数）
+        self.flow_params = (0.5, 2, 11, 1, 5, 1.2, 0) if fast_flow else (0.5, 3, 15, 3, 5, 1.2, 0)
+        self.proc_size = proc_size or (PROC_W, PROC_H)
         self.yolo = None
         if use_yolo:
             self.yolo = YoloGate(model_path)
@@ -113,7 +118,7 @@ class VisionMotion:
         self.accel_x_pre = EMA(0.4)
         self.prev_speed_smooth = None
         # ROI mask: 画面下方 + 排除中间的车 + 去掉最边缘
-        h, w = PROC_H, PROC_W
+        h, w = self.proc_size[1], self.proc_size[0]
         self.mask = np.zeros((h, w), dtype=bool)
         self.mask[int(h * ROI_TOP):, :] = True
         cx = w // 2
@@ -137,9 +142,9 @@ class VisionMotion:
             self.prev_gray = gray.copy()
             return 0.0, 0.0, 0.0, False
 
-        # Farneback 稠密光流
+        # Farneback 稠密光流（--fast 用轻量参数换帧率）
         flow = cv2.calcOpticalFlowFarneback(
-            self.prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+            self.prev_gray, gray, None, *self.flow_params)
         self.prev_gray = gray.copy()
 
         fy = flow[:, :, 1][self.mask]   # 向下为正 → 前进
@@ -152,7 +157,7 @@ class VisionMotion:
         return v_long, v_lat, bump, True
 
     def process(self, frame, t):
-        proc = cv2.resize(frame, (PROC_W, PROC_H))
+        proc = cv2.resize(frame, self.proc_size)
         gray = cv2.cvtColor(proc, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
 
@@ -349,6 +354,9 @@ def main():
     ap.add_argument('--duration', type=float, default=0.0, help='0=一直运行')
     ap.add_argument('--hz', type=float, default=20.0, help='发送频率 (RK3566 建议 15~20)')
     ap.add_argument('--csv', default=None, help='保存发出的遥测到 CSV（分析用）')
+    ap.add_argument('--fast', action='store_true',
+                    help='轻量光流(levels=2,win=11,it=1)，板子上约24FPS；需重新标定增益')
+    ap.add_argument('--proc-size', default=None, help='处理分辨率 WxH，如 256x144（默认320x180）')
     args = ap.parse_args()
 
     cap = None
@@ -369,10 +377,21 @@ def main():
         print('[capture] %s%s' % (args.source,
               (' (视频 %.1ffps)' % video_fps if video_fps else ' (实时)') ))
 
+    proc_size = None
+    if args.proc_size:
+        try:
+            w, h = args.proc_size.lower().split('x')
+            proc_size = (int(w), int(h))
+        except ValueError:
+            print('[warn] --proc-size 格式应为 WxH，用默认值')
+    if args.fast and proc_size is None:
+        proc_size = (256, 144)   # 快速模式的推荐分辨率
     motion = VisionMotion(use_yolo=args.yolo, model_path=args.model,
-                          debug_dir=args.debug_dir)
+                          debug_dir=args.debug_dir, fast_flow=args.fast,
+                          proc_size=proc_size)
     sender = TelemetrySender(args.transport, args.ip, args.port)
-    print('[send] @ %.0fHz' % args.hz)
+    print('[send] @ %.0fHz, proc=%s%s' %
+          (args.hz, motion.proc_size, ' FAST' if args.fast else ''))
 
     csv_fh = open(args.csv, 'w') if args.csv else None
     if csv_fh:
