@@ -91,6 +91,11 @@ cd sim
 | `TWO_PC_SETUP.md` | 游戏机 ↔ 仿真机 网络连接 |
 | `FLYPT_GAMES_REFERENCE.md` | FlyPT 支持游戏与数据来源（GTA5 不在其中；本系统不依赖 FlyPT） |
 | `tests/test_chain.py` | 全链路回归测试（19 项） |
+| `tests/test_robustness.py` | 健壮性测试（18 项） |
+| `tests/test_protocol.py` | 协议/换算/状态帧/日志分析测试（22 项） |
+| `tests/test_web.py` | Web/WS 接口 + WiFi 状态帧测试（6 项） |
+| `tools/preflight.py` | 上实机前 GO/NO-GO 汇总（9 项检查） |
+| `tools/doctor.py` | 环境诊断（依赖/串口/ADB/GitHub DNS） |
 
 ## 五、已知限制与下一步
 
@@ -100,8 +105,8 @@ cd sim
 | 3.3V 直连伺服是否可行 | ⬜ 待实测；不行补 74HCT245 |
 | 急停 GPIO 双保险 | ⬜ 画板时预留（当前硬件急停是常闭按钮切 24V） |
 | 闭环反馈（编码器） | ⬜ 未做（当前开环） |
-| 滤波器增益在线调 | ⚠️ 已支持 lpf/washout/max_speed；增益常量仍需改代码 |
-| YOLO 语义门控 | ⚠️ 接口预留（`YoloGate` TODO），默认纯光流 |
+| 滤波器增益在线调 | ✅ Web 实时调 lpf/washout/限速 + roll/pitch/yaw/sway 增益，自动保存 |
+| YOLO 语义门控 | ⚠️ 接口预留（`YoloGate` TODO），默认纯光流；需用户实际 RKNN 模型输出格式 |
 
 ## 六、关键实测数据
 
@@ -114,3 +119,5 @@ cd sim
 | 16bit 换算精度 | ±95mm 误差 <0.001mm |
 | RK3566 视觉帧率 | ~13.7 FPS（光流占 97%）；PC ~97 FPS |
 | 全链路测试 | 19 PASS / 0 FAIL |
+| 全部自动化测试 | 65 PASS（19+18+22+6），preflight 9 项全绿 |
+| PC 视觉帧率（--fast） | ~208 FPS（默认 ~97，2× 提速） |
