@@ -325,6 +325,10 @@ void loop() {
                       (unsigned)(digitalRead(PIN_ESTOP) == LOW ? 1 : 0));
 #endif
         buf[n++] = '\n';
-        Serial.write(buf, n);
+#ifdef USE_WIFI
+        wifi_send_status(buf, n);   // WiFi 模式：回传给上位机（同一 UDP 端口）
+#else
+        Serial.write(buf, n);       // 串口模式：回传到调试线
+#endif
     }
 }
