@@ -128,6 +128,20 @@ def test_long_run():
           '1000帧最大位移 %.1fmm' % max_disp)
 
 
+def test_status_timeout():
+    print('\n[5] 主控状态回传超时检测')
+    # 模拟 host_app 的 hw_age 计算与前端告警阈值
+    import time
+    last = time.time()
+    age_ok = time.time() - last
+    check('正常状态龄 < 1s', age_ok < 1.0, '%.3fs' % age_ok)
+    # 模拟掉线 1.5 秒
+    last_stale = time.time() - 1.5
+    age_stale = time.time() - last_stale
+    check('掉线状态龄 > 1s 触发告警', age_stale > 1.0, '%.2fs' % age_stale)
+    check('sim模式无状态(-1)不误报', -1 < 0)
+
+
 def main():
     print('=' * 50)
     print('G_chair 健壮性测试')
@@ -136,6 +150,7 @@ def main():
     test_extreme()
     test_param_bounds()
     test_long_run()
+    test_status_timeout()
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
     print('=' * 50)

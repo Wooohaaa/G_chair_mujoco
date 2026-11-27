@@ -46,6 +46,7 @@ state = {
     'speed': [0.0] * 6,
     'lost': 0, 'frames': 0,
     'hw': {'limit': 0, 'enabled': 0, 'watchdog': 0, 'frames': 0},
+    'hw_last_status': 0.0,   # 最近一帧状态回传的时间，用于检测主控掉线
     'params': {},
     'recording': False,
 }
@@ -97,6 +98,7 @@ def status_rx_loop(port):
                         state['hw']['enabled'] = int(parts[13])
                         state['hw']['watchdog'] = int(parts[14])
                         state['hw']['frames'] += 1
+                        state['hw_last_status'] = time.time()
             except (ValueError, IndexError):
                 pass
 
@@ -158,6 +160,9 @@ async def ws_handler(websocket):
                     snap = dict(state)
                     snap['hw'] = dict(state['hw'])
                     snap['params'] = dict(state['params'])
+                    # 主控状态回传年龄（秒）：掉线时不再更新，前端据此告警
+                    snap['hw_age'] = (round(time.time() - state['hw_last_status'], 2)
+                                      if state['hw_last_status'] > 0 else -1)
                 await websocket.send(json.dumps(snap))
             except Exception:
                 break

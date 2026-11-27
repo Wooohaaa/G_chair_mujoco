@@ -101,7 +101,9 @@ function update(s){
   // 醒目的安全告警条
   const alarm=document.getElementById('alarm');
   const lim=s.hw.limit||0, wd=s.hw.watchdog||0, lost=s.lost||0;
+  const age=s.hw_age;
   let msgs=[];
+  if(s.mode==='real' && age>=0 && age>1.0) msgs.push('⛔ ESP32 状态回传中断 '+age.toFixed(1)+'s（检查串口/WiFi/供电）');
   if(wd) msgs.push('⚠ 看门狗触发：平台回中位');
   if(lim) msgs.push('⛔ 限位触发：轴 '+[0,1,2,3,4,5].filter(i=>(lim>>i)&1).join(','));
   if(lost>20) msgs.push('⚠ 遥测断流 '+lost+' 帧（请检查游戏机/网络）');
@@ -114,6 +116,7 @@ function update(s){
   const hw=s.hw;
   let h='<div><span class="kv">使能</span><span class="'+(hw.enabled?'ok':'warnc')+'">'+(hw.enabled?'ON':'OFF')+'</span></div>';
   h+='<div><span class="kv">看门狗</span><span class="'+(hw.watchdog?'bad':'ok')+'">'+(hw.watchdog?'回中位':'正常')+'</span></div>';
+  h+='<div><span class="kv">状态龄</span><span class="'+((age>1.0)?'bad':'ok')+'">'+(age>=0?age.toFixed(2)+'s':'—')+'</span></div>';
   h+='<div><span class="kv">限位</span>'+[0,1,2,3,4,5].map(i=>'<span class="'+((hw.limit>>i)&1?'bad':'')+'">'+(i)+':'+((hw.limit>>i)&1?'触':'·')+' </span>').join('')+'</div>';
   h+='<div style="margin-top:6px"><b>缸 实际mm / 速度mm/s</b></div>';
   for(let i=0;i<6;i++){
