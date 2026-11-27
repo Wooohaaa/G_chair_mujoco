@@ -179,6 +179,13 @@ def main():
           and int(wport.group(1)) == int(hport.group(1)),
           '固件=%s 上位机=%s' % (wport.group(1) if wport else '?',
                               hport.group(1) if hport else '?'))
+    main_cpp = open(os.path.join(ROOT, 'G_chair_esp32', 'src', 'main.cpp'),
+                    encoding='utf-8').read()
+    m = re.search(r'snprintf\(buf, sizeof\(buf\),\s*((?:"[^"]*"\s*)+)', main_cpp)
+    fmt = ''.join(re.findall(r'"([^"]*)"', m.group(1))) if m else ''
+    check('固件状态帧格式一致', fmt.startswith('$') and fmt.count('%ld') == 12
+          and fmt.count('%u') == 3 and ',L%u' in main_cpp,
+          'cur/tgt 12 + limit/en/wd 3 + L锁存' if fmt else '未找到格式串')
 
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))

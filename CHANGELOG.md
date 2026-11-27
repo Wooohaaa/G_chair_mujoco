@@ -32,8 +32,8 @@
 
 ## 2026-11-27 晚间补充（20:35）
 
-- 完整验证体系：`preflight`（9 项检查 / 77 测试）、`report`（时间戳证据）、
-  `doctor`（环境诊断）、`test_protocol.py`（34 项）、`test_web.py`（6 项）
+- 完整验证体系：`preflight`（9 项检查 / 78 测试）、`report`（时间戳证据）、
+  `doctor`（环境诊断）、`test_protocol.py`（35 项）、`test_web.py`（6 项）
 - 上位机：手动姿态保持 + 自定义 6 缸输入、参数持久化、6DOF 位姿显示、
   遥测停滞/主控掉线告警、WiFi UDP 状态回传闭环
 - 固件：`#J<轴>,<步数>` 单轴点动命令、WiFi 模式 `$` 帧经 UDP 回传、
