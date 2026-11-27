@@ -120,6 +120,8 @@ python3 analyze_paired.py --vision video_telemetry.csv \
 | RK3566 泰山派 | 0.68ms | ~71ms | 0.14ms | **72.8ms** | **~13.7 FPS** |
 | PC `--fast` (256×144+轻量光流) | — | ~4.8ms | — | **~4.8ms** | **~208 FPS**（2× 提速） |
 
+板子重连后可实测：`python3 benchmark.py --mock --frames 200 --fast`（对比加/不加 `--fast`）。
+
 **结论：**
 - 光流 Farneback 占 97% 耗时，是唯一瓶颈。
 - **RK3566 上实时处理约 13~14 FPS**，即每帧约 73ms 延迟——这就是默认方案的天花板。

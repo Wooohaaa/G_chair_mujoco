@@ -42,7 +42,10 @@ def run(args):
             return
         print('源: %s' % args.source)
 
-    motion = VisionMotion(use_yolo=args.yolo)
+    proc_size = (256, 144) if args.fast else (PROC_W, PROC_H)
+    motion = VisionMotion(use_yolo=args.yolo, fast_flow=args.fast,
+                          proc_size=proc_size)
+    print('模式: %s, 分辨率 %s' % ('FAST' if args.fast else '默认', proc_size))
     n = args.frames
     t_read, t_pre, t_flow, t_map, t_total = [], [], [], [], []
     prev = None
@@ -55,7 +58,7 @@ def run(args):
             ok, frame = cap.read()
         t1 = time.perf_counter()
 
-        proc = cv2.resize(frame, (PROC_W, PROC_H))
+        proc = cv2.resize(frame, motion.proc_size)
         gray = cv2.cvtColor(proc, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
         t2 = time.perf_counter()
@@ -116,6 +119,7 @@ if __name__ == '__main__':
     ap.add_argument('--mock', action='store_true')
     ap.add_argument('--frames', type=int, default=200)
     ap.add_argument('--yolo', action='store_true')
+    ap.add_argument('--fast', action='store_true', help='轻量光流(256x144, levels2/win11/it1)')
     ap.add_argument('--pure', action='store_true', help='只测纯算法吞吐')
     args = ap.parse_args()
     if args.pure:
