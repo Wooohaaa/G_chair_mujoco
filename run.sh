@@ -17,7 +17,8 @@ usage() {
   echo "  verify       一键全量验证(测试+自检+校验+三版固件编译)
   fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)
   fullchain    全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)
-  preflight    上实机前 GO/NO-GO 检查汇总 + 人工清单"
+  preflight    上实机前 GO/NO-GO 检查汇总 + 人工清单
+  deploy-board 推送最新视觉节点到 RK3566 (需 ADB 连接)"
   echo "  record       录制原始 UDP 遥测到 CSV (第2参数为秒数, 默认60)
   analyze      分析录制日志, 给调参建议 (第2参数为csv路径)"
   echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
@@ -66,6 +67,9 @@ case "$CMD" in
     ;;
   preflight)
     exec "$PY" "$HERE/tools/preflight.py"
+    ;;
+  deploy-board)
+    exec bash "$HERE/deploy_board.sh"
     ;;
   verify)
     echo "===== 全量验证 ====="
