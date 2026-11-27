@@ -56,6 +56,25 @@ _state_lock = threading.Lock()
 _rec_log = []
 
 
+def parse_status_frame(t, hw):
+    """解析 `$` 状态帧到 hw 字典，返回 True/False。
+
+    兼容旧固件(15字段)、旧急停版(16字段)与新固件(末字段 `L<mask>` 为限位锁存)。
+    数值异常时抛 ValueError，由调用方忽略。
+    """
+    if not isinstance(t, str) or not t.startswith('$'):
+        return False
+    parts = t[1:].split(',')
+    if len(parts) < 15:
+        return False
+    hw['limit'] = int(parts[12])
+    hw['enabled'] = int(parts[13])
+    hw['watchdog'] = int(parts[14])
+    if len(parts) >= 16 and parts[-1].startswith('L'):
+        hw['latch'] = int(parts[-1][1:])
+    return True
+
+
 def zero_telemetry():
     return dict.fromkeys(TELEMETRY_CHANNELS, 0.0)
 
@@ -95,16 +114,8 @@ def wifi_status_rx_loop(port):
         for line in data.split(b'\n'):
             try:
                 t = line.decode('ascii', 'ignore').strip()
-                if not t.startswith('$'):
-                    continue
-                parts = t[1:].split(',')
-                if len(parts) >= 15:
+                if parse_status_frame(t, state['hw']):
                     with _state_lock:
-                        state['hw']['limit'] = int(parts[12])
-                        state['hw']['enabled'] = int(parts[13])
-                        state['hw']['watchdog'] = int(parts[14])
-                        if len(parts) >= 16:   # 新固件第16字段=限位锁存
-                            state['hw']['latch'] = int(parts[15])
                         state['hw']['frames'] += 1
                         state['hw_last_status'] = time.time()
             except (ValueError, IndexError):
@@ -126,16 +137,8 @@ def status_rx_loop(port):
             line, _rx_buf = _rx_buf.split(b'\n', 1)
             try:
                 s = line.decode('ascii', 'ignore').strip()
-                if not s.startswith('$'):
-                    continue
-                parts = s[1:].split(',')
-                if len(parts) >= 15:
+                if parse_status_frame(s, state['hw']):
                     with _state_lock:
-                        state['hw']['limit'] = int(parts[12])
-                        state['hw']['enabled'] = int(parts[13])
-                        state['hw']['watchdog'] = int(parts[14])
-                        if len(parts) >= 16:   # 新固件第16字段=限位锁存
-                            state['hw']['latch'] = int(parts[15])
                         state['hw']['frames'] += 1
                         state['hw_last_status'] = time.time()
             except (ValueError, IndexError):

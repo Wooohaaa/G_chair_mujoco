@@ -60,6 +60,22 @@ def main():
     check('关键通道顺序', TELEMETRY_CHANNELS[:3] == ['accel_x', 'accel_z', 'accel_y']
           and TELEMETRY_CHANNELS[6] == 'rot_y' and TELEMETRY_CHANNELS[24] == 'time')
 
+    print('\n[5] 状态帧解析（新旧固件兼容）')
+    from host_app import parse_status_frame
+    base = '$' + ','.join(str(i) for i in range(12)) + ',5,1,0'
+    for name, tail, exp_latch in [
+        ('旧15字段', '', 0),
+        ('旧急停16字段', ',1', 0),
+        ('新16字段锁存', ',L3', 3),
+        ('新急停17字段', ',1,L12', 12),
+    ]:
+        hw = {'limit': 0, 'enabled': 0, 'watchdog': 0, 'latch': 0, 'frames': 0}
+        ok = parse_status_frame(base + tail, hw)
+        check(name, ok and hw['limit'] == 5 and hw['enabled'] == 1
+              and hw['latch'] == exp_latch,
+              'limit=%d enabled=%d latch=%d' % (hw['limit'], hw['enabled'], hw['latch']))
+    check('非$帧忽略', not parse_status_frame('garbage', {'latch': 0}))
+
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
     print('=' * 50)

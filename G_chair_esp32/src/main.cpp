@@ -364,8 +364,8 @@ void loop() {
         n += snprintf(buf + n, sizeof(buf) - n, ",%u",
                       (unsigned)(digitalRead(PIN_ESTOP) == LOW ? 1 : 0));
 #endif
-        // 限位锁存掩码（第16字段，可选；旧解析器只读前15字段，兼容）
-        n += snprintf(buf + n, sizeof(buf) - n, ",%u", (unsigned)latchMask);
+        // 限位锁存掩码（末字段，L前缀与旧 estop 字段区分；旧解析器只读前15字段，兼容）
+        n += snprintf(buf + n, sizeof(buf) - n, ",L%u", (unsigned)latchMask);
         buf[n++] = '\n';
 #ifdef USE_WIFI
         wifi_send_status(buf, n);   // WiFi 模式：回传给上位机（同一 UDP 端口）
