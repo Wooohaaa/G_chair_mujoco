@@ -2,6 +2,15 @@
 
 > 按时间倒序记录重要改动。当前状态见 `STATUS.md`，系统地图见 `SYSTEM_OVERVIEW.md`。
 
+## 2026-11-27 22:10 收尾
+
+- `build_frame()` 成为唯一帧生成器：NaN/Inf→中位、超程→±95mm、短列表补 6 轴，
+  防止畸形帧；`full_chain_sim.py` 改为解码真实 14 字节帧（不再重复换算逻辑）
+- 在线调参 `set_params()` 拒绝 NaN/Inf，同一包中的有效参数仍生效
+- `#T` 自检开始前清除限位锁存与手动保持
+- 新增 CI 模板 `tools/ci/verify.yml.example`（当前 token 无 workflow scope，未启用）
+- 全部 78 项测试通过，`./run.sh report` 生成退出码 0 的证据报告
+
 ## 2026-11-27 22:00 重要修正
 
 - **发现并修复固件换算常数错误**：`config.h` 的 `MAP_DIVISOR` 原为 `1.7078125`，
