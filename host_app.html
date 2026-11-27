@@ -160,10 +160,20 @@ function update(s){
   h+='<div><span class="kv">roll</span>'+(p[3]*180/Math.PI).toFixed(2)+'°</div>';
   h+='<div><span class="kv">pitch</span>'+(p[4]*180/Math.PI).toFixed(2)+'°</div>';
   h+='<div><span class="kv">yaw</span>'+(p[5]*180/Math.PI).toFixed(2)+'°</div>';
-  h+='<div style="margin-top:6px"><b>缸 实际mm / 速度mm/s</b></div>';
+  h+='<div style="margin-top:6px"><b>缸 指令mm / 速度mm/s</b></div>';
   for(let i=0;i<6;i++){
     const sp=s.speed[i]||0;
     h+='<div><span class="kv">缸'+i+'</span>'+s.disp_mm[i].toFixed(1)+' / <span class="'+(sp>128?'bad':'')+'">'+sp.toFixed(0)+'</span></div>';
+  }
+  // 固件回传的真实位置（步数→mm），仅在收到状态帧时显示：实际/目标/误差
+  if(hw.frames>0 && hw.cur && hw.tgt){
+    h+='<div style="margin-top:6px"><b>缸 实际mm / 目标mm / 误差</b></div>';
+    for(let i=0;i<6;i++){
+      const cur=(hw.cur[i]-19200)*0.005, tgt=(hw.tgt[i]-19200)*0.005;
+      const err=cur-tgt;
+      h+='<div><span class="kv">缸'+i+'</span>'+cur.toFixed(2)+' / '+tgt.toFixed(2)+
+         ' / <span class="'+(Math.abs(err)>2?'bad':'ok')+'">'+(err>=0?'+':'')+err.toFixed(2)+'</span></div>';
+    }
   }
   document.getElementById('status').innerHTML=h;
   for(let i=0;i<6;i++){

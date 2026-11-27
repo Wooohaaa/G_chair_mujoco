@@ -45,7 +45,8 @@ state = {
     'disp_mm': [0.0] * 6,     # 6缸位移
     'speed': [0.0] * 6,
     'lost': 0, 'frames': 0,
-    'hw': {'limit': 0, 'enabled': 0, 'watchdog': 0, 'latch': 0, 'frames': 0},
+    'hw': {'limit': 0, 'enabled': 0, 'watchdog': 0, 'latch': 0, 'frames': 0,
+           'cur': [19200] * 6, 'tgt': [19200] * 6},   # 固件回传的实际/目标步数
     'hw_last_status': 0.0,   # 最近一帧状态回传的时间，用于检测主控掉线
     'tele_stale': 0.0,       # 遥测数值停滞时长(秒)，检测游戏暂停/mod卡死
     'params': {},
@@ -67,6 +68,9 @@ def parse_status_frame(t, hw):
     parts = t[1:].split(',')
     if len(parts) < 15:
         return False
+    # 前 12 字段为 6 轴 current / target 步数；19200 步 = 0mm
+    hw['cur'] = [int(x) for x in parts[0:6]]
+    hw['tgt'] = [int(x) for x in parts[6:12]]
     hw['limit'] = int(parts[12])
     hw['enabled'] = int(parts[13])
     hw['watchdog'] = int(parts[14])

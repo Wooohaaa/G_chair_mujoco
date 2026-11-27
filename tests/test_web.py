@@ -92,6 +92,46 @@ def main():
         elif os.path.exists(tuning):
             os.remove(tuning)   # 测试产生的 tuning.json 不留
 
+    print('\n[WiFi 状态帧端到端]')
+    import socket
+    # 第二个实例：WiFi 输出模式，在 esp32_udp 端口收状态帧
+    env2 = dict(env)
+    proc2 = subprocess.Popen([PY, os.path.join(ROOT, 'host_app.py'),
+                              '--mode', 'sim', '--mock', '--output', 'wifi',
+                              '--esp32-ip', '127.0.0.1', '--esp32-udp', '8991',
+                              '--port', '8992'],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             cwd=ROOT, env=env2)
+    try:
+        time.sleep(3)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # cur0..5=19800步(+3mm)，tgt0..5=19200步(0mm)，锁存轴0/1
+        frame = ('$' + ','.join(['19800'] * 6 + ['19200'] * 6) +
+                 ',0,1,0,L3')
+        sock.sendto(frame.encode(), ('127.0.0.1', 8991))
+
+        async def tw():
+            import websockets
+            async with websockets.connect('ws://localhost:8993') as ws:
+                for _ in range(12):
+                    s = json.loads(await asyncio.wait_for(ws.recv(), 3))
+                    if s['hw']['frames'] > 0:
+                        return s
+            return None
+        import asyncio
+        s = asyncio.run(tw())
+        check('WiFi状态帧解析', s is not None and s['hw']['cur'][0] == 19800
+              and s['hw']['tgt'][0] == 19200 and s['hw']['latch'] == 3,
+              ('cur0=%s 实际=%.2fmm latch=%s' %
+               (s['hw']['cur'][0], (s['hw']['cur'][0] - 19200) * 0.005,
+                s['hw']['latch'])) if s else '未收到')
+    finally:
+        proc2.terminate()
+        try:
+            proc2.wait(timeout=3)
+        except Exception:
+            proc2.kill()
+
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
     print('=' * 50)
