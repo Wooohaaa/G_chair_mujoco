@@ -1,4 +1,4 @@
-# 工程状态快照（2026-11-26 22:00）
+# 工程状态快照（2026-11-27 18:51 更新）
 
 > 本文记录"现在到底做到哪了、哪些验证过、哪些必须实物实测、下一步做什么"。
 > 系统全貌见 `SYSTEM_OVERVIEW.md`；快速开始见 `run.sh --help`。
@@ -19,7 +19,9 @@
 | real+serial 完整闭环 | ✅ 实测 | 虚拟串口模拟 ESP32：209 帧、使能=1、状态回传 209 帧、6缸位移正常 |
 | real+wifi 输出 | ✅ 实测 | 6 秒 245 帧 UDP，帧长 14、帧头 ffff |
 | 调试面板 | ✅ 实测 | 虚拟串口闭环，帧格式正确，状态回传解析正确 |
-| 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 17 PASS |
+| 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 18 PASS |
+| 全链路数值仿真 | ✅ | 16bit量化误差 0.0033mm、缸速 ≤110mm/s、MuJoCo 跟踪 RMS 1.43mm |
+| Web 手动测试 | ✅ | 9 预设 + 自定义6缸输入，指令保持直到"恢复遥测"，实测 30.0mm 稳定保持 |
 | 视觉→上位机端到端 | ✅ 实测 | mock 视觉 UDP → 上位机 → MuJoCo，251帧0断流 |
 | WiFi UDP 模式 | ✅ 编译+模拟 | 上位机 `--output wifi` 6秒发245帧；板子 WiFi 版编译通过 |
 | 文档体系 | ✅ | 12+ 份 md，索引见 `SYSTEM_OVERVIEW.md` |
