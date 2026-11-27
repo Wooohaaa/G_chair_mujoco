@@ -84,6 +84,7 @@ case "$CMD" in
     echo "[链路测试]"; "$PY" "$HERE/tests/test_chain.py" | tail -3
     echo "[健壮性测试]"; "$PY" "$HERE/tests/test_robustness.py" | tail -3
     echo "[协议换算测试]"; "$PY" "$HERE/tests/test_protocol.py" | tail -3
+    echo "[Web接口测试]"; "$PY" "$HERE/tests/test_web.py" | tail -3
     echo "[上位机自检]"; "$PY" "$HERE/host_app.py" --check
     echo "[固件逻辑仿真]"; "$PY" "$HERE/G_chair_esp32/tests/firmware_sim.py" | tail -4
     echo "[MuJoCo校验]"; (cd "$HERE/G_chair_mujoco" && "$PY" sim.py --validate 2>&1 | grep "结论:")
