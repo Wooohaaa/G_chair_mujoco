@@ -9,7 +9,10 @@ cd /home/chiehyu/G_chair/G_chair/sim
 ./run.sh host-sim --mock    # 无硬件演示（浏览器 localhost:8765）
 ./run.sh host-real --serial /dev/ttyUSB0    # 接真实 ESP32
 ./run.sh host-wifi --esp32-ip <板子IP>      # WiFi 直连
-./run.sh verify             # 全量验证（出证据）
+./run.sh verify             # 全量验证（57项测试，出证据）
+./run.sh report             # 同上并存成带时间戳的报告文件
+./run.sh test-proto         # 协议/换算测试（中位精度）
+./run.sh test-web           # Web接口测试
 ```
 
 ## 实机接线（只接一根先测）
