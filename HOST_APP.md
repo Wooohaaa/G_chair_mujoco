@@ -72,6 +72,7 @@ GTA5 mod → UDP 25浮点 :4124 → UdpTelemetryReceiver
 
 ```bash
 ./run.sh record 60 output/session1.csv      # 录60秒到指定文件（不覆盖基准数据集）
+./tools/capture_and_analyze.sh 60           # 录完立即分析，一步出调参建议
 ```
 
 录制的 CSV 可以用分析工具量化评估，并给出具体调参建议：
