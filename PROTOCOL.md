@@ -72,8 +72,8 @@ GTA5 mod / 视觉节点 ──UDP──> 上位机 ──UART或UDP──> ESP32
 | 项 | 值 |
 |---|---|
 | 传输 | UART 115200（调试线保留），20Hz |
-| 格式 | `$cur0,...,cur5,tgt0,...,tgt5,limitMask,enabled,watchdog[,estop]\n` |
-| 字段数 | 15（启用急停编译时 16） |
+| 格式 | `$cur0,...,cur5,tgt0,...,tgt5,limitMask,enabled,watchdog[,estop][,latchMask]\n` |
+| 字段数 | 15（旧）/ 16（急停版）/ 17（新固件加锁存掩码）；解析器只读前 15 字段，向后兼容 |
 | cur/tgt | 步数（0~38400） |
 | limitMask | 6 位，bit i=1 表示轴 i 限位触发 |
 | enabled | 0/1 |

@@ -45,7 +45,7 @@ state = {
     'disp_mm': [0.0] * 6,     # 6缸位移
     'speed': [0.0] * 6,
     'lost': 0, 'frames': 0,
-    'hw': {'limit': 0, 'enabled': 0, 'watchdog': 0, 'frames': 0},
+    'hw': {'limit': 0, 'enabled': 0, 'watchdog': 0, 'latch': 0, 'frames': 0},
     'hw_last_status': 0.0,   # 最近一帧状态回传的时间，用于检测主控掉线
     'tele_stale': 0.0,       # 遥测数值停滞时长(秒)，检测游戏暂停/mod卡死
     'params': {},
@@ -103,6 +103,8 @@ def wifi_status_rx_loop(port):
                         state['hw']['limit'] = int(parts[12])
                         state['hw']['enabled'] = int(parts[13])
                         state['hw']['watchdog'] = int(parts[14])
+                        if len(parts) >= 16:   # 新固件第16字段=限位锁存
+                            state['hw']['latch'] = int(parts[15])
                         state['hw']['frames'] += 1
                         state['hw_last_status'] = time.time()
             except (ValueError, IndexError):
@@ -132,6 +134,8 @@ def status_rx_loop(port):
                         state['hw']['limit'] = int(parts[12])
                         state['hw']['enabled'] = int(parts[13])
                         state['hw']['watchdog'] = int(parts[14])
+                        if len(parts) >= 16:   # 新固件第16字段=限位锁存
+                            state['hw']['latch'] = int(parts[15])
                         state['hw']['frames'] += 1
                         state['hw_last_status'] = time.time()
             except (ValueError, IndexError):

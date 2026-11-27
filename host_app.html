@@ -138,7 +138,9 @@ function update(s){
   else if(s.mode==='real' && age>=0 && age>1.0) msgs.push('⛔ ESP32 状态回传中断 '+age.toFixed(1)+'s（检查串口/WiFi/供电）');
   if(s.tele_stale>1.0) msgs.push('⚠ 遥测数值停滞 '+s.tele_stale.toFixed(1)+'s（游戏暂停或 mod 卡死）');
   if(wd) msgs.push('⚠ 看门狗触发：平台回中位');
+  const latch=hw.latch||0;
   if(lim) msgs.push('⛔ 限位触发：轴 '+[0,1,2,3,4,5].filter(i=>(lim>>i)&1).join(','));
+  if(latch) msgs.push('🔒 限位锁存：轴 '+[0,1,2,3,4,5].filter(i=>(latch>>i)&1).join(',')+'（回中位或反向指令解锁）');
   if(lost>20) msgs.push('⚠ 遥测断流 '+lost+' 帧（请检查游戏机/网络）');
   if(msgs.length){ alarm.style.display='block'; alarm.textContent=msgs.join(' | '); }
   else { alarm.style.display='none'; }

@@ -345,8 +345,10 @@ void loop() {
     if (millis() - last_status >= 50) {
         last_status = millis();
         byte limitMask = 0;
+        byte latchMask = 0;
         for (int i = 0; i < NUM_AXES; i++) {
             if (digitalRead(PIN_LIMIT[i]) == LOW) limitMask |= (1 << i);
+            if (axes[i].limitLatch != 0) latchMask |= (1 << i);
         }
         byte wd = (enabled && (millis() - last_frame_ms > WATCHDOG_MS)) ? 1 : 0;
         // 一次写入，避免多次 Serial.print 造成 loop 阻塞（P0-2：保持脉冲计数准确）
@@ -362,6 +364,8 @@ void loop() {
         n += snprintf(buf + n, sizeof(buf) - n, ",%u",
                       (unsigned)(digitalRead(PIN_ESTOP) == LOW ? 1 : 0));
 #endif
+        // 限位锁存掩码（第16字段，可选；旧解析器只读前15字段，兼容）
+        n += snprintf(buf + n, sizeof(buf) - n, ",%u", (unsigned)latchMask);
         buf[n++] = '\n';
 #ifdef USE_WIFI
         wifi_send_status(buf, n);   // WiFi 模式：回传给上位机（同一 UDP 端口）
