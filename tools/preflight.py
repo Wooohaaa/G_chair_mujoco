@@ -70,6 +70,17 @@ def main():
     line = [l for l in out.splitlines() if '结论:' in l]
     checks.append(('全链路数值仿真', ok and bool(line), line[-1] if line else '失败'))
 
+    # 6b. 视觉节点 mock（默认 + --fast），验证可选回退链路可运行
+    vis_args = ['G_chair_vision/screen_telemetry.py', '--mock', '--ip', '127.0.0.1',
+                '--duration', '2', '--hz', '20']
+    ok1, out1 = run([PY] + vis_args)
+    ok2, out2 = run([PY] + vis_args + ['--fast', '--proc-size', '256x144'])
+    f1 = [l for l in out1.splitlines() if '共发送' in l]
+    f2 = [l for l in out2.splitlines() if '共发送' in l]
+    checks.append(('视觉节点mock(默认+fast)',
+                   ok1 and ok2 and bool(f1) and bool(f2),
+                   '%s / %s' % (f1[-1] if f1 else '失败', f2[-1] if f2 else '失败')))
+
     print()
     for name, ok, detail in checks:
         print('  %s %-22s %s' % ('✅' if ok else '❌', name, detail))
