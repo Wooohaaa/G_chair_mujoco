@@ -18,7 +18,8 @@ usage() {
   fwsim        仿真 ESP32 固件步进逻辑(上真实电机前验证时序)
   fullchain    全链路数值仿真(遥测→映射→16bit→固件→MuJoCo)
   preflight    上实机前 GO/NO-GO 检查汇总 + 人工清单"
-  echo "  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)"
+  echo "  record       录制原始 UDP 遥测到 CSV (第2参数为秒数, 默认60)
+  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)"
   echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
   echo "  validate     运行 MuJoCo 静态校验"
   echo "  simulate     用真实视频录制 MuJoCo 对比视频"
@@ -50,6 +51,9 @@ case "$CMD" in
     ;;
   test-robust)
     exec "$PY" "$HERE/tests/test_robustness.py"
+    ;;
+  record)
+    exec "$PY" "$HERE/G_chair_mujoco/capture_raw.py" "${1:-60}" "${2:-}"
     ;;
   analyze)
     exec "$PY" "$HERE/tools/analyze_run.py" "$@"

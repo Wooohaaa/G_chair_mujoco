@@ -28,8 +28,11 @@ while time.time() - t0 < dur:
     time.sleep(0.01)
 rx.stop()
 
-out = os.path.join(HERE, 'output', 'raw_telemetry.csv')
+# 第二个参数可指定输出路径，避免覆盖基准数据集 raw_telemetry.csv
+out = (sys.argv[2] if len(sys.argv) > 2 else
+       os.path.join(HERE, 'output', 'raw_telemetry.csv'))
 a = np.array(rows)
+os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
 np.savetxt(out, a, delimiter=',', header=','.join(TELEMETRY_CHANNELS), comments='')
 print('保存 %s (%d 帧)' % (out, len(rows)))
 
