@@ -260,10 +260,12 @@ static void handle_text_cmd(const String &c) {
     } else if (c == "#T") {
         // 启动非阻塞自检状态机（不能用 delay —— 期间 update_axis 不跑，脉冲发不出去）
         enable_drivers(true); enabled = true;
+        manual_hold_until = 0;   // 自检接管，退出手动点动保持
         selftest_active = true;
         selftest_axis = 0;
         selftest_phase = 0;
         selftest_t = millis();
+        for (int i = 0; i < NUM_AXES; i++) axes[i].limitLatch = 0;  // 自检从干净状态开始
         move_axis(0, CENTER_POS_STEPS + 300);
         Serial.println("OK selftest started (non-blocking)");
     }
