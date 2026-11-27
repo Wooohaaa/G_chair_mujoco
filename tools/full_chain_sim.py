@@ -6,7 +6,7 @@ full_chain_sim.py — 全链路数值仿真（从遥测到 MuJoCo 实际位姿�
 
   25通道遥测 CSV
     → MotionPipeline (低通→映射→洗出→限速→IK) → 6缸位移 mm
-    → 16bit 帧 (controller.py, 同 serial_bridge)
+    → 16bit 帧 (host_app.build_frame，与实机发送完全相同)
     → ESP32 固件步进仿真 (firmware_sim.Axis, 4ms tick)
     → MuJoCo command_displacement → 实际平台位姿
 
@@ -25,7 +25,7 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, 'G_chair_esp32', 'tests'))
 
 from motion_pipeline import MotionPipeline
-from G_chair_sim.controller import DualBoardController
+from host_app import build_frame                 # 与上位机完全相同的帧生成器
 from firmware_sim import Axis, CENTER, STEP_MM, SAMPLE_PERIOD_US
 from G_chair_mujoco.sim import GChairSim
 
@@ -55,7 +55,6 @@ def main():
     print('=' * 60)
 
     mp = MotionPipeline()
-    ctl = DualBoardController()
     axes = [Axis() for _ in range(6)]
     sim = GChairSim()
 
@@ -67,10 +66,11 @@ def main():
         tele = {k: float(row[j]) for j, k in enumerate(keys)}
         pose, disp = mp.pose_and_disp(tele, DT)
 
-        # 走一遍真实串口帧（16bit 量化）
+        # 走一遍与上位机完全相同的 <FF FF>+6×uint16 帧（含净化/量化）
+        frame = build_frame(disp)
         frame_mm = []
         for i in range(6):
-            v = ctl.board1.displacement_to_flypt_16bit(disp[i])
+            v = (frame[2 + 2 * i] << 8) | frame[3 + 2 * i]
             steps = v / (65535 / 38400)
             mm = (steps - CENTER) * STEP_MM
             frame_mm.append(mm)
