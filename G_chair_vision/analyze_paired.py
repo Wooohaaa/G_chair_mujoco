@@ -173,8 +173,8 @@ def main():
                     help='真实遥测CSV(带t列)')
     ap.add_argument('--dt', type=float, default=0.02)
     args = ap.parse_args()
-    analyze(os.path.join(HERE, args.vision) if not os.path.isabs(args.vision) else args.vision,
-            os.path.join(HERE, args.truth) if not os.path.isabs(args.truth) else args.truth,
+    # 尊重调用者的工作目录：相对路径按 cwd 解析，不再强制加 HERE
+    analyze(os.path.abspath(args.vision), os.path.abspath(args.truth),
             args.dt)
 
 
