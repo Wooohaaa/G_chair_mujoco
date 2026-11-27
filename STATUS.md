@@ -68,7 +68,9 @@ tools/full_chain_sim.py   全链路数值仿真
 G_chair_esp32/tests/firmware_sim.py  固件步进逻辑仿真
 PROTOCOL.md               线格式/单位/时序唯一权威参考
 motion_pipeline.py        共用映射核心（set_params 可在线调参）
-G_chair_esp32/            固件 + 4 份硬件文档（BOARD_SPEC/MINIMAL_SETUP/POWERON_CHECKLIST/WIFI_MODE）
+G_chair_esp32/            固件 + 硬件文档（INTEGRATION/BOARD_SPEC/MINIMAL_SETUP/
+                          POWERON_CHECKLIST/WIFI_MODE/REPLACING_DUAL_MEGA/
+                          SCHEDULING_ANALYSIS/WIRING_COMPARISON）
 G_chair_vision/           RK3566 视觉节点 + 性能基准
 G_chair_gta5/             GTA5 mod
 ```
