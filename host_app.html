@@ -67,6 +67,15 @@
   <button class="warn" onclick="cmd('estop')" style="margin-left:12px">⛔ 急停回中</button>
   <button onclick="cmd('release')" style="background:#374151;margin-left:8px">恢复遥测控制</button>
   <div class="legend">手动指令会保持直到点"恢复遥测控制"；急停=保持中位。行程±95mm</div>
+  <div style="margin-top:8px;font-size:12px;color:#c9ced6">自定义6缸位移(mm):
+    <input type="number" id="c0" value="0" min="-95" max="95" style="width:52px">
+    <input type="number" id="c1" value="0" min="-95" max="95" style="width:52px">
+    <input type="number" id="c2" value="0" min="-95" max="95" style="width:52px">
+    <input type="number" id="c3" value="0" min="-95" max="95" style="width:52px">
+    <input type="number" id="c4" value="0" min="-95" max="95" style="width:52px">
+    <input type="number" id="c5" value="0" min="-95" max="95" style="width:52px">
+    <button onclick="sendManual()">发送并保持</button>
+  </div>
 </div>
 
 <div class="card">
@@ -89,6 +98,11 @@ function conn(){
 }
 conn();
 function cmd(c,extra){if(ws&&ws.readyState===1)ws.send(JSON.stringify(Object.assign({cmd:c},extra||{})));}
+function sendManual(){
+  const disp=[];
+  for(let i=0;i<6;i++) disp.push(parseFloat(document.getElementById('c'+i).value)||0);
+  cmd('manual_mm',{disp});
+}
 
 function applyParams(){sendParamDirect();}
 function sendParamDirect(){
