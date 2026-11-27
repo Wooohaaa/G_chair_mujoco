@@ -328,6 +328,9 @@ async def main_async(args):
     if args.output == 'wifi':
         wifi_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print('[wifi] 输出到 udp://%s:%d' % (args.esp32_ip, args.esp32_udp))
+        # WiFi 模式视为已连接（UDP 无连接概念，看门狗在 ESP32 侧）
+        with _state_lock:
+            state['connected'] = True
 
     motion_ref = MotionPipeline(lpf_tau=args.lpf, washout_tau=args.washout,
                                 max_speed=args.max_speed)
