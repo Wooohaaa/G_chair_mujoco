@@ -58,7 +58,17 @@ def compare(paths):
     return 0
 
 
+def usage():
+    print('用法:')
+    print('  analyze_run.py [csv路径]              分析单份录制日志')
+    print('  analyze_run.py --compare <a.csv> <b.csv>   对比调参前后')
+    print('  默认分析 output/host_app_log.csv')
+
+
 def main():
+    if '--help' in sys.argv or '-h' in sys.argv:
+        usage()
+        return 0
     if len(sys.argv) > 2 and sys.argv[1] == '--compare':
         return compare(sys.argv[2:])
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
