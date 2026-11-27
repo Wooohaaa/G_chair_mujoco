@@ -3,6 +3,13 @@
 > 按时间倒序记录重要改动。当前状态见 `STATUS.md`，系统地图见 `SYSTEM_OVERVIEW.md`。
 
 ## 2026-11-27 23:20 工作流修正
+## 2026-11-27 23:34 视觉配对分析修正
+
+- `analyze_paired.best_lag()` 原先用全段 std 归一化错位切片，相关系数可 >1
+  （实测 1.163），增益建议不可信；改为按对齐切片重新归一化并钳位到 [-1,1]。
+- 真值恒定通道不再产出 1e8 量级幅度比，标为"真值恒定, 跳过"。
+- 生成的 `paired_analysis.png` 从版本库移除并加入 .gitignore。
+
 
 - 发现 `capture_and_analyze.sh` 把原始遥测(25通道)直接喂给 `analyze_run.py`，
   产生"时长 -0.5s / 19700Hz"的荒谬结果。新增 `tools/replay_and_log.py`
