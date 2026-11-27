@@ -24,7 +24,8 @@ usage() {
   echo "  preflight    上实机前 GO/NO-GO 检查汇总 + 人工清单"
   echo "  deploy-board 推送最新视觉节点到 RK3566 (需 ADB 连接)"
   echo "  record       录制原始 UDP 遥测到 CSV (第2参数为秒数, 默认60)"
-  echo "  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)"
+  echo "  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)
+  replay-analyze 原始遥测→运行日志(回放映射管线), 供 analyze 使用"
   echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
   echo "  validate     运行 MuJoCo 静态校验"
   echo "  simulate     用真实视频录制 MuJoCo 对比视频"
@@ -68,6 +69,9 @@ case "$CMD" in
     ;;
   analyze)
     exec "$PY" "$HERE/tools/analyze_run.py" "$@"
+    ;;
+  replay-analyze)
+    exec "$PY" "$HERE/tools/replay_and_log.py" "$@"
     ;;
   fwsim)
     exec "$PY" "$HERE/G_chair_esp32/tests/firmware_sim.py" "$@"

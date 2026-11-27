@@ -146,6 +146,23 @@ def main():
     finally:
         os.remove(tmp)
 
+    # 原始遥测 → 运行日志 → 分析 的完整工作流
+    with tempfile.TemporaryDirectory() as td:
+        raw = os.path.join(td, 'raw.csv')
+        log = os.path.join(td, 'log.csv')
+        np.savetxt(raw, data[:, :25], delimiter=',',
+                   header=','.join(TELEMETRY_CHANNELS), comments='', fmt='%.6f')
+        r1 = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'replay_and_log.py'),
+                             raw, log], capture_output=True, text=True)
+        r2 = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'analyze_run.py'), log],
+                            capture_output=True, text=True)
+        r3 = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'analyze_run.py'), raw],
+                            capture_output=True, text=True)
+        check('原始遥测→日志→分析', r1.returncode == 0 and r2.returncode == 0
+              and '回放' in r1.stdout and '平均' in r2.stdout
+              and r3.returncode != 0 and '原始遥测CSV' in r3.stdout,
+              r1.stdout.strip()[:40])
+
     print('\n[8] 上位机 ↔ 固件常量一致性（静态扫描 config.h）')
     cfg_path = os.path.join(ROOT, 'G_chair_esp32', 'include', 'config.h')
     cfg = open(cfg_path, encoding='utf-8').read()

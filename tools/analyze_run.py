@@ -33,6 +33,11 @@ def compare(paths):
     print('=' * 72)
     rows = []
     for p in paths:
+        with open(p, encoding='utf-8', errors='ignore') as f:
+            if f.readline().strip().startswith('accel_x'):
+                print('  %s: 原始遥测CSV，请先用 replay_and_log.py 转换，跳过'
+                      % os.path.basename(p))
+                continue
         d = np.loadtxt(p, delimiter=',', skiprows=1)
         if d.ndim == 1:
             d = d.reshape(1, -1)
@@ -77,6 +82,15 @@ def main():
         ROOT, 'output', 'host_app_log.csv')
     if not os.path.exists(path):
         print('找不到 %s' % path)
+        return 1
+
+    # 防止把原始遥测 CSV（25通道、无时间列）当运行日志分析，产出荒谬结果
+    with open(path, encoding='utf-8', errors='ignore') as f:
+        first_header = f.readline().strip()
+    if first_header.startswith('accel_x'):
+        print('这是原始遥测CSV（25通道），不是上位机运行日志。')
+        print('请先转换: ./.venv/bin/python tools/replay_and_log.py %s output/replay_log.csv' % path)
+        print('再分析:   ./.venv/bin/python tools/analyze_run.py output/replay_log.csv')
         return 1
 
     data = np.loadtxt(path, delimiter=',', skiprows=1)

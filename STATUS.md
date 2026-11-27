@@ -19,7 +19,7 @@
 | real+serial 完整闭环 | ✅ 实测 | 虚拟串口模拟 ESP32：209 帧、使能=1、状态回传 209 帧、6缸位移正常 |
 | real+wifi 输出 | ✅ 实测 | 6 秒 245 帧 UDP，帧长 14、帧头 ffff |
 | 调试面板 | ✅ 实测 | 虚拟串口闭环，帧格式正确，状态回传解析正确 |
-| 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 18 PASS + `test_protocol.py` 35 PASS + `test_web.py` 6 PASS |
+| 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 18 PASS + `test_protocol.py` 36 PASS + `test_web.py` 6 PASS |
 | 全链路数值仿真 | ✅ | 16bit量化误差 0.0033mm、缸速 ≤110mm/s、MuJoCo 跟踪 RMS 1.43mm |
 | 四种参数模式 | ✅ | 默认/无限速/FlyPT/无滤波 各 800 帧均有限、位移合理（限速模式 15.3mm vs 无限速 53.1mm，证明限速生效） |
 | 固件 jog 命令 | ✅ | `#J0,300`=+1.5mm、`#J2,-200`=−1.0mm、超程钳位、非法轴拒绝；10s有界保持防看门狗撤销 |
@@ -73,7 +73,7 @@ HOST_APP.md               一键上位机（监控+调参+回放）
 STATUS.md                 本文：状态快照
 tests/test_chain.py       19 项链路测试
 tests/test_robustness.py   18 项健壮性测试
-tests/test_protocol.py    35 项协议/状态帧/日志分析/常量一致性测试
+tests/test_protocol.py    36 项协议/状态帧/日志分析/常量一致性测试
 tests/test_web.py        6 项 Web/WS 接口+WiFi状态帧测试
 tools/preflight.py        上实机前 GO/NO-GO 汇总
 tools/full_chain_sim.py   全链路数值仿真

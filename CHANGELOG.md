@@ -2,6 +2,14 @@
 
 > 按时间倒序记录重要改动。当前状态见 `STATUS.md`，系统地图见 `SYSTEM_OVERVIEW.md`。
 
+## 2026-11-27 23:20 工作流修正
+
+- 发现 `capture_and_analyze.sh` 把原始遥测(25通道)直接喂给 `analyze_run.py`，
+  产生"时长 -0.5s / 19700Hz"的荒谬结果。新增 `tools/replay_and_log.py`
+  （原始遥测 → 映射管线回放 → 28列运行日志），并修正一键脚本为
+  record → replay-analyze → analyze 三步；`analyze_run.py` 现在识别原始遥测
+  CSV 并给出明确提示。实测：197帧回放为3.9s/50Hz日志，分析正常。
+
 ## 2026-11-27 22:10 收尾
 
 - `build_frame()` 成为唯一帧生成器：NaN/Inf→中位、超程→±95mm、短列表补 6 轴，
@@ -41,8 +49,8 @@
 
 ## 2026-11-27 晚间补充（20:35）
 
-- 完整验证体系：`preflight`（9 项检查 / 78 测试）、`report`（时间戳证据）、
-  `doctor`（环境诊断）、`test_protocol.py`（35 项）、`test_web.py`（6 项）
+- 完整验证体系：`preflight`（9 项检查 / 79 测试）、`report`（时间戳证据）、
+  `doctor`（环境诊断）、`test_protocol.py`（36 项）、`test_web.py`（6 项）
 - 上位机：手动姿态保持 + 自定义 6 缸输入、参数持久化、6DOF 位姿显示、
   遥测停滞/主控掉线告警、WiFi UDP 状态回传闭环
 - 固件：`#J<轴>,<步数>` 单轴点动命令、WiFi 模式 `$` 帧经 UDP 回传、
