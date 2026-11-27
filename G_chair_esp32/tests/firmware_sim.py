@@ -40,9 +40,19 @@ class Axis:
         self.target = CENTER
         self.period = SAMPLE_PERIOD_US
         self.running = False
+        self.limitLatch = 0   # +1=上限位 -1=下限位 0=正常
 
     def move(self, target):
-        self.target = int(max(0, min(MAX_POS, target)))
+        target = int(max(0, min(MAX_POS, target)))
+        # 与固件一致的限位互锁
+        if self.limitLatch != 0:
+            diff = target - self.current
+            if self.limitLatch > 0 and diff > 0:
+                return
+            if self.limitLatch < 0 and diff < 0:
+                return
+            self.limitLatch = 0
+        self.target = target
         diff = self.target - self.current
         if diff == 0:
             self.running = False
@@ -131,6 +141,26 @@ def test_decel():
     assert periods[-1] > periods[0], '没有减速'
 
 
+def test_limit_latch():
+    print('\n=== 4. 限位锁存互锁 ===')
+    a = Axis()
+    a.current = CENTER
+    # 模拟上限位触发：dir>0, latch=+1
+    a.limitLatch = 1
+    a.current = CENTER + 200   # 触发时的影子位置
+    a.target = a.current
+    # 再收到继续向上的指令 → 应被拒绝
+    a.move(CENTER + 400)
+    rejected = (a.target == CENTER + 200)
+    print('  上限位锁存后继续向上指令 -> %s' % ('拒绝 ✓' if rejected else '未拒绝 ✗'))
+    assert rejected
+    # 收到向下指令 → 解锁并执行
+    a.move(CENTER + 100)
+    unlocked = (a.limitLatch == 0 and a.target == CENTER + 100)
+    print('  收到向下指令 -> %s' % ('解锁并执行 ✓' if unlocked else '失败 ✗'))
+    assert unlocked
+
+
 def test_replay(csv_path):
     print('\n=== 4. 回放上位机日志，预测电缸运动 ===')
     if not os.path.exists(csv_path):
@@ -165,6 +195,7 @@ def main():
     test_basic()
     test_speed_limit()
     test_decel()
+    test_limit_latch()
     log = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
         ROOT, 'output', 'host_app_log.csv')
     test_replay(log)

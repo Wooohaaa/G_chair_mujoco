@@ -26,6 +26,8 @@ struct Stepper {
     volatile uint32_t period_us = SAMPLE_PERIOD_US;
     uint8_t pin_step, pin_dir;
     rmt_item32_t item;
+    // 限位锁存：+1=上限位触发(只许向下)，-1=下限位触发(只许向上)，0=正常
+    int8_t limitLatch = 0;
 };
 
 static Stepper axes[NUM_AXES];
@@ -88,6 +90,15 @@ static void rmt_stop(Stepper &s) {
 // ---------------------- 位置控制 ----------------------
 static void move_axis(int i, long target) {
     Stepper &s = axes[i];
+    // 限位互锁：锁存后只允许朝"离开限位"的方向运动；反向指令才解锁。
+    // 例：上限位(+1)触发后，只接受 target <= current 的指令；一旦收到向下指令，
+    // 先解锁再执行，避免持续顶死。
+    if (s.limitLatch != 0) {
+        long diff = target - s.current;
+        if (s.limitLatch > 0 && diff > 0) return;   // 上限位：拒继续向上
+        if (s.limitLatch < 0 && diff < 0) return;   // 下限位：拒继续向下
+        s.limitLatch = 0;                            // 收到离开方向 → 解锁
+    }
     s.target = target;
     long diff = target - s.current;
     if (diff == 0) { if (s.running) rmt_stop(s); return; }
@@ -132,7 +143,10 @@ static void enable_drivers(bool on) {
 }
 
 static void go_neutral() {
-    for (int i = 0; i < NUM_AXES; i++) move_axis(i, CENTER_POS_STEPS);
+    for (int i = 0; i < NUM_AXES; i++) {
+        axes[i].limitLatch = 0;   // 回中位时清除限位锁存，允许自由运动
+        move_axis(i, CENTER_POS_STEPS);
+    }
 }
 
 // ---------------------- 串口 ----------------------
@@ -224,6 +238,7 @@ static void handle_text_cmd(const String &c) {
             long steps = c.substring(comma + 1).toInt();
             if (axis >= 0 && axis < NUM_AXES) {
                 enable_drivers(true); enabled = true;
+                axes[axis].limitLatch = 0;   // 手动 jog 先清锁存
                 long target = CENTER_POS_STEPS + steps;
                 target = max(0L, min((long)MAX_POS_STEPS, target));
                 move_axis(axis, target);
@@ -298,9 +313,12 @@ void loop() {
     }
 #endif
 
-    // 限位触发: 立即停该轴
+    // 限位触发: 立即停该轴并锁存方向（防止下一帧继续顶死）
     for (int i = 0; i < NUM_AXES; i++) {
         if (digitalRead(PIN_LIMIT[i]) == LOW && axes[i].running) {
+            // 触发瞬间运动方向即限位端：dir>0=上限位, dir<0=下限位
+            axes[i].limitLatch = (axes[i].dir > 0) ? 1 : -1;
+            axes[i].target = axes[i].current;   // 同步影子位置，避免累积误差
             rmt_stop(axes[i]);
         }
     }
