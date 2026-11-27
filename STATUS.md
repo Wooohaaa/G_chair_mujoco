@@ -19,7 +19,7 @@
 | real+serial 完整闭环 | ✅ 实测 | 虚拟串口模拟 ESP32：209 帧、使能=1、状态回传 209 帧、6缸位移正常 |
 | real+wifi 输出 | ✅ 实测 | 6 秒 245 帧 UDP，帧长 14、帧头 ffff |
 | 调试面板 | ✅ 实测 | 虚拟串口闭环，帧格式正确，状态回传解析正确 |
-| 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 18 PASS |
+| 全链路测试 | ✅ | `test_chain.py` 19 PASS + `test_robustness.py` 18 PASS + `test_protocol.py` 15 PASS |
 | 全链路数值仿真 | ✅ | 16bit量化误差 0.0033mm、缸速 ≤110mm/s、MuJoCo 跟踪 RMS 1.43mm |
 | Web 手动测试 | ✅ | 9 预设 + 自定义6缸输入，指令保持直到"恢复遥测"，实测 30.0mm 稳定保持 |
 | WiFi 状态闭环 | ✅ | 固件 UDP 回传 `$` 帧，实测 60 帧/3s、状态龄 0.05s，无"未连接"误报 |
@@ -68,6 +68,7 @@ HOST_APP.md               一键上位机（监控+调参+回放）
 STATUS.md                 本文：状态快照
 tests/test_chain.py       19 项链路测试
 tests/test_robustness.py   18 项健壮性测试
+tests/test_protocol.py    15 项协议换算测试
 tools/preflight.py        上实机前 GO/NO-GO 汇总
 tools/full_chain_sim.py   全链路数值仿真
 tools/analyze_run.py      录制日志分析 + --compare 调参前后对比
