@@ -204,6 +204,7 @@ static unsigned long selftest_t = 0;
 static void handle_text_cmd(const String &c) {
     if (c == "#H") {
         Serial.println("CMD: #T=selftest  #N=neutral  #E=enable  #D=disable");
+        Serial.println("     #J<axis>,<steps> e.g. #J0,300 (=+1.5mm on axis0)");
     } else if (c == "#N") {
         enable_drivers(true); enabled = true;
         go_neutral();
@@ -215,6 +216,25 @@ static void handle_text_cmd(const String &c) {
         enable_drivers(false); enabled = false;
         for (int i = 0; i < NUM_AXES; i++) rmt_stop(axes[i]);
         Serial.println("OK disable");
+    } else if (c.startsWith("#J")) {
+        // 单轴点动：#J<axis>,<steps>，steps 为相对中位的步数（1步=0.005mm）
+        int comma = c.indexOf(',');
+        if (comma > 2) {
+            int axis = c.substring(2, comma).toInt();
+            long steps = c.substring(comma + 1).toInt();
+            if (axis >= 0 && axis < NUM_AXES) {
+                enable_drivers(true); enabled = true;
+                long target = CENTER_POS_STEPS + steps;
+                target = max(0L, min((long)MAX_POS_STEPS, target));
+                move_axis(axis, target);
+                Serial.printf("OK jog axis%d -> %ld steps (%.2fmm)\n",
+                              axis, target, (target - CENTER_POS_STEPS) * 0.005);
+            } else {
+                Serial.println("ERR axis 0..5");
+            }
+        } else {
+            Serial.println("ERR format: #J<axis>,<steps>");
+        }
     } else if (c == "#T") {
         // 启动非阻塞自检状态机（不能用 delay —— 期间 update_axis 不跑，脉冲发不出去）
         enable_drivers(true); enabled = true;
