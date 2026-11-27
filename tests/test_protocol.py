@@ -146,6 +146,26 @@ def main():
     finally:
         os.remove(tmp)
 
+    print('\n[8] 上位机 ↔ 固件常量一致性（静态扫描 config.h）')
+    cfg_path = os.path.join(ROOT, 'G_chair_esp32', 'include', 'config.h')
+    cfg = open(cfg_path, encoding='utf-8').read()
+
+    def macro(name):
+        import re
+        m = re.search(r'^#define\s+%s\s+(0[xX][0-9A-Fa-f]+|[0-9.]+)' % name, cfg, re.M)
+        if not m:
+            return None
+        s = m.group(1)
+        return float(int(s, 16)) if s.lower().startswith('0x') else float(s)
+
+    check('帧头一致', macro('FRAME_HEADER_BYTE') == 255.0)
+    check('中位步数一致', macro('CENTER_POS_STEPS') == 19200.0
+          and macro('MAX_POS_STEPS') == 38400.0)
+    check('换算除数一致', abs(macro('MAP_DIVISOR') - DIV) < 1e-6,
+          '固件=%.7f 上位机=%.7f' % (macro('MAP_DIVISOR'), DIV))
+    check('时序常量一致', macro('WATCHDOG_MS') == 500.0
+          and macro('SAMPLE_PERIOD_US') == 4000.0)
+
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
     print('=' * 50)

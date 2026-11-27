@@ -15,8 +15,10 @@
 #define MAX_POS_STEPS       38400L      // 4ms 窗口内的步数上限
 #define CENTER_POS_STEPS    19200L
 // 修正原 .ino 的 1.7 近似误差：1.7 会让 0mm(16bit=32768) → 19275 步 = +0.37mm 偏置，
-// 且 ±95mm 顶到 ±96mm 钳位。精确除数 = 65535/38400，使 0mm→19200 步、±95mm→±19200 步。
-#define MAP_DIVISOR         1.7078125f  // 65535/38400，精确中位映射
+// 且 ±95mm 顶到 ±96mm 钳位。精确除数 = 65535/38400 = **1.706640625**（务必写全精度）：
+// 历史上误写成 1.7078125（那不是 65535/38400），会造成中位 -0.065mm、满行程 -0.13mm 偏差。
+// 正确值使 0mm→19200 步、±95mm→±19200 步，与上位机 controller.py 完全一致。
+#define MAP_DIVISOR         1.706640625f  // = 65535/38400 精确值
 #define SAMPLE_PERIOD_US    4000UL      // 与 Mega 的 samplePeriod=4000 一致
 #define MIN_PULSE_PERIOD_US 39UL
 #define MAX_PULSE_PERIOD_US 4000UL
