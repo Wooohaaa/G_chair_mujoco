@@ -79,6 +79,45 @@ def main():
               % (hw['limit'], hw['enabled'], hw['latch'], hw['cur'][0], hw['tgt'][0]))
     check('非$帧忽略', not parse_status_frame('garbage', {'latch': 0}))
 
+    print('\n[6] 录制日志分析（新增实际位置列）')
+    import subprocess
+    import tempfile
+    import numpy as np
+    t = np.arange(0, 5, 0.02)
+    legs = np.column_stack([10 * np.sin(t)] * 6)
+    cur = legs + np.column_stack([0.5 * np.sin(3 * t + i) for i in range(6)])
+    data = np.column_stack([t, legs, np.zeros((len(t), 6)),
+                            np.zeros((len(t), 6)), cur,
+                            np.zeros((len(t), 3))])
+    hdr = ','.join(['t'] + ['leg%d' % i for i in range(6)] +
+                   ['pose%d' % i for i in range(6)] +
+                   ['speed%d' % i for i in range(6)] +
+                   ['cur%d' % i for i in range(6)] +
+                   ['hwlimit', 'hwlatch', 'hwenabled'])
+    with tempfile.NamedTemporaryFile('w', suffix='.csv', delete=False) as f:
+        f.write(hdr + '\n')
+        np.savetxt(f, data, delimiter=',')
+        tmp = f.name
+    try:
+        r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'analyze_run.py'), tmp],
+                           capture_output=True, text=True)
+        check('实际位置跟踪分析', r.returncode == 0
+              and '缸跟踪 RMS' in r.stdout and '0.50' in r.stdout,
+              [l.strip() for l in r.stdout.splitlines() if '最大误差' in l][:1])
+    finally:
+        os.remove(tmp)
+    # 旧格式 19 列应优雅跳过
+    with tempfile.NamedTemporaryFile('w', suffix='.csv', delete=False) as f:
+        f.write(hdr.split(',hwlimit')[0] + '\n')
+        np.savetxt(f, data[:, :19], delimiter=',')
+        tmp = f.name
+    try:
+        r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'analyze_run.py'), tmp],
+                           capture_output=True, text=True)
+        check('旧格式兼容', r.returncode == 0 and '旧格式日志' in r.stdout)
+    finally:
+        os.remove(tmp)
+
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))
     print('=' * 50)

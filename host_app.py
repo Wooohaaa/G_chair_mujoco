@@ -209,9 +209,18 @@ def pipeline_loop(args, motion, rx, sim):
             state['speed'] = [round(x, 1) for x in speed]
             state['frames'] += 1
             if state['recording']:
+                # 固件回传的实际缸位置（步→mm）；无状态帧时记 NaN 避免误判跟踪误差
+                if state['hw']['frames'] > 0:
+                    cur_mm = [(float(x) - 19200) * 0.005
+                              for x in state['hw']['cur']]
+                else:
+                    cur_mm = [float('nan')] * 6
                 _rec_log.append([round(time.time() - state['t0'], 3)] +
                                 [float(x) for x in lim] +
-                                [float(x) for x in pose] + speed)
+                                [float(x) for x in pose] + speed + cur_mm +
+                                [float(state['hw']['limit']),
+                                 float(state['hw']['latch']),
+                                 float(state['hw']['enabled'])])
 
         next_t += DT
         time.sleep(max(0, next_t - time.time()))
@@ -313,7 +322,9 @@ def save_log():
     os.makedirs(out_dir, exist_ok=True)
     header = (','.join(['t'] + ['leg%d' % i for i in range(6)] +
                        ['pose%d' % i for i in range(6)] +
-                       ['speed%d' % i for i in range(6)]))
+                       ['speed%d' % i for i in range(6)] +
+                       ['cur%d' % i for i in range(6)] +
+                       ['hwlimit', 'hwlatch', 'hwenabled']))
     np.savetxt(path, np.array(_rec_log), delimiter=',', header=header, comments='')
     print('[record] %s (%d rows)' % (path, len(_rec_log)))
 

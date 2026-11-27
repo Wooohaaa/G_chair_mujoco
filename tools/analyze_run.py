@@ -2,11 +2,13 @@
 """
 analyze_run.py — 分析录制的上位机运行日志，量化问题并给出调参建议。
 
-读取 output/host_app_log.csv（t, leg0..5, pose0..5, speed0..5），输出：
+读取 output/host_app_log.csv（t, leg0..5, pose0..5, speed0..5,
+  可选 cur0..5=固件实际位置(mm), hwlimit/hwlatch/hwenabled），输出：
   - 行程占用 / 超程帧
   - 缸速分布 / 超限帧（主控硬件上限 128mm/s）
   - 左右转对称性（用 pose3=roll 的方向分布）
   - 体感幅度是否够（roll/pitch 峰值）
+  - 实机跟踪误差（指令 leg vs 固件实际 cur；sim 模式记 NaN 自动跳过）
   - 给具体的增益/限速调整建议
 
 用法: ./.venv/bin/python tools/analyze_run.py [csv路径]
@@ -129,7 +131,27 @@ def main():
               (roll_deg[L].mean(), roll_deg[R].mean(),
                abs(roll_deg[L].mean()) / max(abs(roll_deg[R].mean()), 1e-6)))
 
-    print('\n[5] 建议')
+    print('\n[5] 实机跟踪误差（需固件状态帧录制，sim 模式为 NaN）')
+    if data.shape[1] >= 25:
+        cur = data[:, 19:25]           # mm，来自固件 $帧的 cur 步数
+        valid = np.isfinite(cur).all(axis=1)
+        if valid.sum() > 10:
+            err = cur[valid] - legs[valid]
+            rms = np.sqrt(np.mean(err ** 2, axis=0))
+            print('  有效状态帧 %d / %d' % (valid.sum(), len(t)))
+            print('  缸跟踪 RMS: %s mm' % ' '.join('%.2f' % x for x in rms))
+            print('  缸最大误差: %s mm' %
+                  ' '.join('%.2f' % x for x in np.max(np.abs(err), axis=0)))
+            if np.max(np.abs(err)) > 3.0:
+                print('  ⚠️ 最大误差 >3mm：检查限位/使能/供电/机械卡滞')
+            else:
+                print('  跟踪误差在合理范围（<3mm）')
+        else:
+            print('  无有效状态帧（sim 模式或固件未回传），跳过')
+    else:
+        print('  旧格式日志（19列），无实际位置字段，跳过')
+
+    print('\n[6] 建议')
     tips = []
     if np.max(np.abs(legs)) > 90:
         tips.append('缸位移接近满行程 → 减小对应平移/角度增益')
