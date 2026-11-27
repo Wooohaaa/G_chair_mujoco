@@ -9,10 +9,13 @@
 并用同一套算法驱动真实的 ESP32-S3 主控（替代原两块 Mega2560）。
 
 ```
-FlyPT / 游戏遥测 ──> 6DOF 位姿 ──> 滤波 ──> 逆运动学 IK ──> 6 缸位移 ──> MuJoCo 闭环平台
-                                                              │
-                                              实际平台位姿 <──┘ (FK 校验)
+GTA5 mod / 视觉节点 ─UDP─> 上位机 (host_app.py)
+                              ├ 低通 → 加速度驱动映射 → 洗出 → 限速
+                              └ IK → 6 缸位移(mm) ──> MuJoCo 闭环平台（仿真）
+                                                  └─> 串口/WiFi 帧 → ESP32 → 真实电缸
 ```
+
+> FlyPT 软件不参与运行，仅在 `FLYPT_GAMES_REFERENCE.md` 中作参数来源参考。
 
 ## 目录结构
 
@@ -21,7 +24,7 @@ FlyPT / 游戏遥测 ──> 6DOF 位姿 ──> 滤波 ──> 逆运动学 IK 
 | **`host_app.py`** | **一键上位机**：GTA5 UDP → 映射/IK/限速 → 串口或 MuJoCo，带 Web 实时监控 + 在线调参（详见 `HOST_APP.md`） |
 | `tests/test_chain.py` | 全链路回归测试（19 项，无需硬件） |
 | `G_chair_mujoco/` | **主体**：MuJoCo 模型、IK/FK、场景驱动、查看/渲染、校验 |
-| `G_chair_sim/` | 上游数据链：遥测生成 → 姿态映射 → FlyPT 滤波 → IK → 控制器/串口仿真 |
+| `G_chair_sim/` | 基础模块：UDP 解析、姿态映射/滤波（含 FlyPT 等价算法）、IK、控制器/串口仿真 |
 | `G_chair_gta5/` | GTA5 游戏机端 UDP 遥测发送脚本（ScriptHookV + SHVDN） |
 | `G_chair_esp32/` | ESP32-S3 单板控制器固件（6 路 RMT 步进，替代双 Mega2560）。总体说明见 `REPLACING_DUAL_MEGA.md`，画板规格见 `BOARD_SPEC.md` |
 | `motion_pipeline.py` | **仿真与实机共用的映射管线**：遥测→低通→加速度驱动映射→洗出→6DOF→IK→缸位移 |
