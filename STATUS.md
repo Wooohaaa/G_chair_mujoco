@@ -1,4 +1,4 @@
-# 工程状态快照（2026-11-27 19:13 更新）
+# 工程状态快照（2026-11-27 20:09 更新）
 
 > 本文记录"现在到底做到哪了、哪些验证过、哪些必须实物实测、下一步做什么"。
 > 系统全貌见 `SYSTEM_OVERVIEW.md`；快速开始见 `run.sh --help`。
@@ -73,6 +73,8 @@ tests/test_web.py        5 项 Web/WS 接口测试
 tools/preflight.py        上实机前 GO/NO-GO 汇总
 tools/full_chain_sim.py   全链路数值仿真
 tools/analyze_run.py      录制日志分析 + --compare 调参前后对比
+tools/save_report.py      全量验证 + 时间戳报告
+tools/doctor.py           环境诊断(依赖/串口/ADB/GitHub DNS)
 G_chair_esp32/tests/firmware_sim.py  固件步进逻辑仿真
 PROTOCOL.md               线格式/单位/时序唯一权威参考
 motion_pipeline.py        共用映射核心（set_params 可在线调参）
