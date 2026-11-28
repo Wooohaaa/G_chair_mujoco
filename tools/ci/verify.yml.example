@@ -23,6 +23,8 @@ jobs:
           python tests/test_robustness.py
           python tests/test_protocol.py
           python tests/test_web.py
+      - name: Web UI runtime render check
+        run: node tools/ui_check.js
       - name: Host self-check
         run: python host_app.py --check
       - name: MuJoCo mechanism validation

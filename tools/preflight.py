@@ -51,6 +51,15 @@ def main():
     line = [l for l in out.splitlines() if '结果:' in l]
     checks.append(('Web/WS接口测试', ok, line[-1] if line else '无输出'))
 
+    # 2d. Web 界面运行时渲染检查（需 node，缺失则跳过）
+    import shutil
+    if shutil.which('node'):
+        ok, out = run(['node', 'tools/ui_check.js'])
+        line = [l for l in out.splitlines() if 'UI runtime' in l]
+        checks.append(('Web界面运行时渲染', ok, line[-1] if line else '无输出'))
+    else:
+        print('[preflight] 未安装 node，跳过 Web 界面运行时检查')
+
     # 3. 上位机自检
     ok, out = run([PY, 'host_app.py', '--check'])
     checks.append(('上位机自检', ok, '映射/帧格式 OK' if ok else '失败'))
