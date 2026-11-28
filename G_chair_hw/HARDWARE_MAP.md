@@ -42,6 +42,45 @@
 | 7 | GTA5 录制数据前10s回放（scale=0.5/1.0） | 可见斜坡升降，回放段本身较平缓 |
 | 8 | GTA5 录制 **78–88s 最剧烈片段**回放（scale=0.5，55mm/s） | **动作明显、连续、自然** ✓ |
 
+## 切换到 ESP32-S3 单板时的接线（2026-11-28 16:59）
+
+一块 ESP32-S3 替掉两块 Mega,DB25 线束/2.2kΩ/24V 供电/硬件急停**不变**,
+只把控制端从 Mega GPIO 换成 ESP32 GPIO。按 sim 缸号(与 MotionPipeline 输出一致)接:
+
+| sim 缸 | 实物位置 | STEP→DB25-8 | DIR→DB25-20 | LIMIT←(可选) |
+|---|---|---|---|---|
+| 0 | 右后 | GPIO4 | GPIO17 | GPIO13 |
+| 1 | 左后 | GPIO5 | GPIO18 | GPIO14 |
+| 2 | 左中 | GPIO6 | GPIO8 | GPIO21 |
+| 3 | 左前 | GPIO7 | GPIO9 | GPIO47 |
+| 4 | 右前 | GPIO15 | GPIO10 | GPIO48 |
+| 5 | 右中 | GPIO16 | GPIO11 | GPIO38 |
+| 使能(共用) | → 所有 DB25-2 | GPIO12 | | |
+
+### 旧 Mega 引脚 → ESP32 引脚（逐线转移）
+
+老固件每块板 4 通道引脚相同：STEP=`12,2,7,45`，DIR=`30,31,32,33`。
+
+| 旧板 | 旧通道 | 实物缸 | sim缸 | 旧STEP | 旧DIR | ESP32 STEP | ESP32 DIR |
+|---|---|---|---|---|---|---|---|
+| 1号板 | ch0 | 右前 | cyl4 | GPIO12 | GPIO30 | GPIO15 | GPIO10 |
+| 1号板 | ch1 | 右中 | cyl5 | GPIO2 | GPIO31 | GPIO16 | GPIO11 |
+| 1号板 | ch2 | 右后 | cyl0 | GPIO7 | GPIO32 | GPIO4 | GPIO17 |
+| 1号板 | ch3 | 左后 | cyl1 | GPIO45 | GPIO33 | GPIO5 | GPIO18 |
+| 2号板 | ch0 | 左中 | cyl2 | GPIO12 | GPIO30 | GPIO6 | GPIO8 |
+| 2号板 | ch1 | 左前 | cyl3 | GPIO2 | GPIO31 | GPIO7 | GPIO9 |
+
+伺服侧 DB25 接线不变；使能改由 ESP32 GPIO12 共用（默认低有效）；
+ESP32 GND 必须接所有 DB25-14 共地。
+
+- 每根信号线串 2.2kΩ;ESP32 GND 直连所有 DB25-14(24V-)共地。
+- DB25-1(24V+)来自独立伺服电源,不接 ESP32。
+- 上位机改用 `host_app.py`(6轴14字节帧),不再用双 Mega 网页控制台;
+  先停掉双 Mega 网页服务腾出 UDP 4124,再
+  `sudo ./run.sh host-real --serial /dev/ttyUSB?`(默认监听 GTA5 UDP 4124)。
+- **注意零位不同**:ESP32 固件 32768→19200 步=0mm(机械中位),
+  而老 Mega 的 0 步=上电位置。切换后必须先把电缸置于行程中部再发 `#N`。
+
 ## 实时控制网页（2026-11-28 16:23 实测通过）
 
 网页提供"开始驱动 / 停止（回零）"按钮、缩放/限幅/偏置参数、串口配置，
