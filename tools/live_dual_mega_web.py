@@ -30,10 +30,28 @@ from dual_mega_map import CYL_TO_BOARD
 DT = 0.02
 MAX_STEP = int(110.0 * DT / 0.005)
 HTML = os.path.join(HERE, 'live_dual_mega_web.html')
+ZERO_FILE = os.path.join(ROOT, 'output', 'dual_mega_zero.json')
+
+
+def load_zero():
+    try:
+        z = json.load(open(ZERO_FILE))
+        if isinstance(z, list) and len(z) == 6:
+            return [int(x) for x in z]
+    except Exception:
+        pass
+    return [6000] * 6
+
+
+def save_zero(z):
+    os.makedirs(os.path.dirname(ZERO_FILE), exist_ok=True)
+    json.dump([int(x) for x in z], open(ZERO_FILE, 'w'), indent=2)
+
 
 state = {
     'running': False, 'starting': False, 'stopping': False,
     'scale': 0.5, 'max_mm': 25.0, 'base_steps': 6000,
+    'zero': load_zero(),
     'serial1': '/dev/ttyUSB1', 'serial2': '/dev/ttyUSB2', 'udp_port': 4124,
     'frames': 0, 'tele_frames': 0, 'last_tele': 0.0,
     'target': [0] * 6, 'applied': [0] * 6,
@@ -61,11 +79,12 @@ def bridge_loop():
     s1 = s2 = sock = None
     with lock:
         p1, p2, uport = state['serial1'], state['serial2'], state['udp_port']
-        scale, maxmm, base = state['scale'], state['max_mm'], state['base_steps']
+        scale, maxmm = state['scale'], state['max_mm']
+        zero = np.array(state['zero'], dtype=float)   # 逐缸机械零位偏置
     try:
         print('[bridge] 初始化', p1, p2, uport, flush=True)
-        if base * 0.005 + maxmm > 95:
-            raise ValueError('偏置+限幅超出物理半行程')
+        if np.max(zero) + maxmm / 0.005 > 38400 or np.min(zero) - maxmm / 0.005 < 0:
+            raise ValueError('零位偏置+限幅超出步数范围')
         s1, s2 = [serial.Serial(p, 115200, timeout=0.1) for p in (p1, p2)]
         print('[bridge] 串口已打开', flush=True)
         for s in (s1, s2):
@@ -100,11 +119,11 @@ def bridge_loop():
             if tele is not None and not _stop_event.is_set():
                 _, disp = mp.pose_and_disp(tele, DT)
                 v = np.clip(disp * scale, -maxmm, maxmm)
-                target = np.clip(np.round(base + v / 0.005), 0, 38400)
+                target = np.clip(np.round(zero + v / 0.005), 0, 38400)
                 if _stop_event.is_set():
-                    target = np.zeros(6)
+                    target = zero.copy()   # 停止回到水平零位，不是全0
             else:
-                target = np.zeros(6) if _stop_event.is_set() else target
+                target = zero.copy() if _stop_event.is_set() else target
             delta = target - applied
             applied += np.clip(delta, -MAX_STEP, MAX_STEP)
             applied = np.clip(applied, 0, 38400)
@@ -119,20 +138,20 @@ def bridge_loop():
                 state['target'] = np.round(target).astype(int).tolist()
             next_t += DT
             time.sleep(max(0, next_t - time.time()))
-        # 停止：斜坡回 0
-        zero = np.zeros(6)
+        # 停止：斜坡回水平零位（逐缸偏置）
         for _ in range(200):
             delta = zero - applied
             applied += np.clip(delta, -MAX_STEP, MAX_STEP)
-            if np.max(np.abs(applied)) == 0:
+            if np.max(np.abs(delta)) == 0:
                 break
             f1, f2 = frames_from_steps(applied.astype(int))
             s1.write(f1); s2.write(f2)
             with lock:
                 state['applied'] = np.round(applied).astype(int).tolist()
-                state['target'] = [0] * 6
+                state['target'] = [int(x) for x in zero]
             time.sleep(DT)
-        s1.write(frames_from_steps(zero)[0]); s2.write(frames_from_steps(zero)[1])
+        f1, f2 = frames_from_steps(zero.astype(int))
+        s1.write(f1); s2.write(f2)
         time.sleep(0.2)
     except Exception as e:
         with lock:
@@ -151,8 +170,8 @@ def bridge_loop():
             state['running'] = False
             state['starting'] = False
             state['stopping'] = False
-            state['applied'] = [0] * 6
-            state['target'] = [0] * 6
+            state['applied'] = [int(x) for x in zero]
+            state['target'] = [int(x) for x in zero]
 
 
 def start_bridge():
@@ -219,9 +238,38 @@ async def ws_handler(ws):
                     state['scale'] = float(d.get('scale', state['scale']))
                     state['max_mm'] = float(d.get('max_mm', state['max_mm']))
                     state['base_steps'] = int(d.get('base_steps', state['base_steps']))
+                    if d.get('zero') is not None:
+                        try:
+                            z = [int(x) for x in d['zero']]
+                            if len(z) == 6 and all(0 <= x <= 38400 for x in z):
+                                state['zero'] = z
+                                save_zero(z)
+                        except Exception:
+                            pass
                 ok, msg = start_bridge()
             elif cmd == 'stop':
                 ok, msg = stop_bridge()
+            elif cmd in ('zero', 'recenter'):
+                vals = d.get('zero')
+                if vals is not None:
+                    try:
+                        z = [int(x) for x in vals]
+                        if len(z) != 6 or any(x < 0 or x > 38400 for x in z):
+                            raise ValueError('需要6个0~38400的整数')
+                        with lock:
+                            state['zero'] = z
+                        save_zero(z)
+                    except Exception as e:
+                        ok, msg = False, '偏置无效: %s' % e
+                        await ws.send(json.dumps({'ack': cmd, 'ok': ok, 'msg': msg}))
+                        continue
+                if cmd == 'recenter':
+                    ok, msg = start_bridge()
+                    if ok:
+                        ok2, msg2 = stop_bridge()
+                        msg += ' / ' + msg2
+                else:
+                    ok, msg = True, '零位偏置已保存'
             elif cmd == 'params':
                 with lock:
                     for k in ('scale', 'max_mm'):

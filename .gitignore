@@ -25,3 +25,4 @@ GchairUnity/
 G_chair_esp32/.pio/
 G_chair_esp32/.vscode/
 G_chair_vision/paired_analysis.png
+output/dual_mega_zero.json

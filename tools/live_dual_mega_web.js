@@ -12,14 +12,28 @@ function connect(){
   };
 }
 function send(cmd){if(ws&&ws.readyState===1)ws.send(JSON.stringify(Object.assign({cmd:cmd},collect())))}
+const ZERO_NAMES=['右后','左后','左中','左前','右前','右中'];
+let zeroInit=false;
+function buildZeros(s){
+  if(zeroInit)return;zeroInit=true;
+  const box=document.getElementById('zeros');
+  for(let i=0;i<6;i++){
+    box.innerHTML+='<span style="display:inline-block;width:80px">'+ZERO_NAMES[i]+
+      ' <input type="text" id="z'+i+'" value="'+((s.zero||[])[i]||6000)+
+      '" style="width:65px"></span>';
+  }
+}
 function collect(){
+  const zero=[];for(let i=0;i<6;i++){const el=document.getElementById('z'+i);zero.push(el?parseInt(el.value):6000)}
   return {scale:parseFloat(document.getElementById('scale').value),
     max_mm:parseFloat(document.getElementById('maxmm').value),
     base_steps:parseInt(document.getElementById('base').value),
+    zero:zero,
     serial1:document.getElementById('p1').value,
     serial2:document.getElementById('p2').value};
 }
 function update(s){
+  buildZeros(s);
   const btnS=document.getElementById('btnStart'),btnX=document.getElementById('btnStop');
   btnS.disabled=s.running||s.starting;btnX.disabled=!s.running&&!s.starting;
   const st=document.getElementById('status');

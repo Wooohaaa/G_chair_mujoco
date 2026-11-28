@@ -32,6 +32,13 @@ input[type=range]{width:220px;vertical-align:middle}input[type=text]{background:
   <div class="legend">软件限速 110mm/s；从0步平滑起步；停止先回零；遥测断流保持位置。急停请用手边硬件按钮。</div>
 </div>
 <div class="box">
+  <h2>零位校准（步）— 平台歪时调这里</h2>
+  <div class="legend">每缸独立偏移。看着平台调到水平后点"保存零位"，之后停止/归零都会回到这个水平位。</div>
+  <div id="zeros" style="margin:8px 0"></div>
+  <button onclick="send('recenter')">↕ 移动到当前零位</button>
+  <button onclick="send('zero')">💾 保存零位</button>
+</div>
+<div class="box">
   <h2>运行统计</h2>
   <div><span class="kv">遥测帧</span><span id="tele">0</span></div>
   <div><span class="kv">发送帧</span><span id="sent">0</span></div>
