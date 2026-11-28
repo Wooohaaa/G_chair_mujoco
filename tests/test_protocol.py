@@ -242,9 +242,13 @@ def main():
                     encoding='utf-8').read()
     m = re.search(r'snprintf\(buf, sizeof\(buf\),\s*((?:"[^"]*"\s*)+)', main_cpp)
     fmt = ''.join(re.findall(r'"([^"]*)"', m.group(1))) if m else ''
-    check('固件状态帧格式一致', fmt.startswith('$') and fmt.count('%ld') == 12
-          and fmt.count('%u') == 3 and ',L%u' in main_cpp,
-          'cur/tgt 12 + limit/en/wd 3 + L锁存' if fmt else '未找到格式串')
+    ver = re.search(r'#define\s+FW_VERSION\s+"([^"]+)"', cfg)
+    check('固件状态帧/版本命令一致',
+          fmt.startswith('$') and fmt.count('%ld') == 12
+          and fmt.count('%u') == 3 and ',L%u' in main_cpp
+          and bool(ver) and 'c == "#V"' in main_cpp,
+          'cur/tgt 12 + limit/en/wd 3 + L锁存, FW=%s'
+          % (ver.group(1) if ver else '?'))
 
     print('\n' + '=' * 50)
     print('结果: %d PASS, %d FAIL' % (PASS, FAIL))

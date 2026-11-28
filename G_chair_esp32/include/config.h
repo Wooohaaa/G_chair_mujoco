@@ -10,6 +10,9 @@
 #define FRAME_HEADER_BYTE   0xFF
 #define NUM_AXES            6
 
+// 固件版本：串口监视器发 #V 可确认烧录的是哪一版（排查刷错固件/旧换算常数）
+#define FW_VERSION          "1.2.0"
+
 // ==================== 机械与行程参数（与 servoController.ino 一致）====================
 #define XINGCHENG_MM        192.0f
 #define MAX_POS_STEPS       38400L      // 4ms 窗口内的步数上限

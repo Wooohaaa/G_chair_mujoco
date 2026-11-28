@@ -221,6 +221,20 @@ static void handle_text_cmd(const String &c) {
     if (c == "#H") {
         Serial.println("CMD: #T=selftest  #N=neutral  #E=enable  #D=disable");
         Serial.println("     #J<axis>,<steps> e.g. #J0,300 (=+1.5mm on axis0)");
+        Serial.println("     #V=version/build info");
+    } else if (c == "#V") {
+        Serial.printf("FW %s | axes=%d divisor=%.9f center=%ld max=%ld steps\n",
+                      FW_VERSION, NUM_AXES, (double)MAP_DIVISOR,
+                      CENTER_POS_STEPS, MAX_POS_STEPS);
+        Serial.printf("build: %s, watchdog=%dms, tick=%lus, 0mm=32768->%ld steps\n",
+#ifdef USE_WIFI
+                      "WIFI"
+#elif defined(USE_ESTOP_GPIO)
+                      "ESTOP"
+#else
+                      "SERIAL"
+#endif
+                      , WATCHDOG_MS, SAMPLE_PERIOD_US, CENTER_POS_STEPS);
     } else if (c == "#N") {
         manual_hold_until = 0;
         enable_drivers(true); enabled = true;
