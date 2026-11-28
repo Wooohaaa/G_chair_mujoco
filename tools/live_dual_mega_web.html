@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>G_chair 双Mega实时控制台</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#11151c;color:#e6e9ef;margin:0;padding:16px;font-size:13px}
+.box{background:#1b212b;border:1px solid #2a303a;border-radius:8px;padding:12px;margin-bottom:12px}
+button{background:#2a6df0;color:#fff;border:0;border-radius:6px;padding:8px 16px;margin-right:6px;cursor:pointer;font-size:14px}
+button.stop{background:#c0392b}button:disabled{opacity:.4;cursor:not-allowed}
+h1{font-size:18px;margin:0 0 12px}h2{font-size:14px;margin:0 0 8px;color:#9fb3d9}
+table{border-collapse:collapse;width:100%}td,th{padding:3px 8px;border-bottom:1px solid #2a303a;text-align:center}
+.kv{display:inline-block;width:110px;color:#9fb3d9}
+.good{color:#4ade80}.bad{color:#f87171}.warn{color:#fbbf24}
+.pr{margin:6px 0}label{display:inline-block;width:130px}.val{display:inline-block;width:50px;text-align:right;color:#fbbf24}
+input[type=range]{width:220px;vertical-align:middle}input[type=text]{background:#11151c;color:#e6e9ef;border:1px solid #2a303a;border-radius:4px;padding:3px 6px}
+#alarm{display:none;background:#4a1d1d;border:1px solid #c0392b;border-radius:6px;padding:10px;margin-bottom:12px;color:#ffb3b3}
+.legend{color:#8892a4;font-size:12px}
+</style></head><body>
+<h1>G_chair 双Mega实时控制台 <span id="conn" class="warn">连接中…</span></h1>
+<div id="alarm"></div>
+<div class="box">
+  <button id="btnStart" onclick="send('start')">▶ 开始驱动</button>
+  <button id="btnStop" class="stop" onclick="send('stop')" disabled>■ 停止（回零）</button>
+  <span id="status" class="warn">未运行</span>
+</div>
+<div class="box">
+  <h2>参数（停止时修改，开始时生效）</h2>
+  <div class="pr"><label>缩放 scale</label><input type="range" id="scale" min="0.1" max="1" step="0.05" value="0.5"><span class="val" id="scalev">0.50</span></div>
+  <div class="pr"><label>限幅 mm</label><input type="range" id="maxmm" min="5" max="25" step="1" value="25"><span class="val" id="maxmmv">25</span></div>
+  <div class="pr"><label>偏置 步</label><input type="range" id="base" min="2000" max="12000" step="500" value="6000"><span class="val" id="basev">6000</span></div>
+  <div class="pr"><label>串口1</label><input type="text" id="p1" value="/dev/ttyUSB1">
+       <label style="width:60px">串口2</label><input type="text" id="p2" value="/dev/ttyUSB2"></div>
+  <div class="legend">软件限速 110mm/s；从0步平滑起步；停止先回零；遥测断流保持位置。急停请用手边硬件按钮。</div>
+</div>
+<div class="box">
+  <h2>运行统计</h2>
+  <div><span class="kv">遥测帧</span><span id="tele">0</span></div>
+  <div><span class="kv">发送帧</span><span id="sent">0</span></div>
+  <div><span class="kv">数据龄</span><span id="age">—</span></div>
+  <div><span class="kv">错误</span><span id="error"></span></div>
+</div>
+<div class="box">
+  <h2>缸步数（目标 / 实际，0步=上电位置）</h2>
+  <table><tr><th>缸</th><th>0 右前</th><th>1 右中</th><th>2 右后</th><th>3 左后</th><th>4 左中</th><th>5 左前</th></tr>
+  <tr><th>目标</th><td id="t0">0</td><td id="t1">0</td><td id="t2">0</td><td id="t3">0</td><td id="t4">0</td><td id="t5">0</td></tr>
+  <tr><th>实际</th><td id="a0">0</td><td id="a1">0</td><td id="a2">0</td><td id="a3">0</td><td id="a4">0</td><td id="a5">0</td></tr></table>
+</div>
+<script src="/live_dual_mega_web.js"></script>
+</body></html>

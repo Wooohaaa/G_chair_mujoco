@@ -26,7 +26,8 @@ usage() {
   echo "  record       录制原始 UDP 遥测到 CSV (第2参数为秒数, 默认60)"
   echo "  analyze      分析录制日志, 给调参建议 (第2参数为csv路径)
   replay-analyze 原始遥测→运行日志(回放映射管线), 供 analyze 使用
-  replay-dual     GTA5遥测→老双Mega帧(默认离线预览; --serial才发送)"
+  replay-dual     GTA5遥测→老双Mega帧(默认离线预览; --serial才发送)
+  live-web       双Mega实时控制网页(需root串口权限: sudo ./run.sh live-web)"
   echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
   echo "  validate     运行 MuJoCo 静态校验"
   echo "  simulate     用真实视频录制 MuJoCo 对比视频"
@@ -76,6 +77,9 @@ case "$CMD" in
     ;;
   replay-dual)
     exec "$PY" "$HERE/tools/replay_dual_mega.py" "$@"
+    ;;
+  live-web)
+    exec "$PY" "$HERE/tools/live_dual_mega_web.py" "$@"
     ;;
   fwsim)
     exec "$PY" "$HERE/G_chair_esp32/tests/firmware_sim.py" "$@"

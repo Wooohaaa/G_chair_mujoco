@@ -26,6 +26,25 @@
 | 7 | GTA5 录制数据前10s回放（scale=0.5/1.0） | 可见斜坡升降，回放段本身较平缓 |
 | 8 | GTA5 录制 **78–88s 最剧烈片段**回放（scale=0.5，55mm/s） | **动作明显、连续、自然** ✓ |
 
+## 实时控制网页（2026-11-28 16:23 实测通过）
+
+网页提供"开始驱动 / 停止（回零）"按钮、缩放/限幅/偏置参数、串口配置，
+以及遥测帧数、发送帧数、数据龄、六缸目标/实际步数实时显示。
+
+```bash
+# 需要 root 串口权限
+echo 100200 | sudo -S bash -c 'setsid \
+  /home/chiehyu/G_chair/G_chair/sim/G_chair_mujoco/.venv/bin/python -u \
+  /home/chiehyu/G_chair/G_chair/sim/tools/live_dual_mega_web.py --port 8770 \
+  > /tmp/opencode/live_web.log 2>&1 < /dev/null &'
+```
+
+浏览器打开 `http://192.168.43.120:8770`。实测：开始后遥测帧与发送帧持续增长，
+按停止后六缸实际步数全部平滑回 0，无异常。
+
+安全同 `live_dual_mega.py`：软件限速 110mm/s、遥测断流保持位置、异常自动回零；
+硬件急停按钮仍是最终保护。
+
 ## GTA5 数据回放方法
 
 使用 `tools/replay_dual_mega.py`（默认只离线生成帧，不碰串口）：
