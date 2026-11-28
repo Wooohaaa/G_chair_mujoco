@@ -28,7 +28,8 @@ usage() {
   replay-analyze 原始遥测→运行日志(回放映射管线), 供 analyze 使用
   replay-dual     GTA5遥测→老双Mega帧(默认离线预览; --serial才发送)
   live-web       双Mega实时控制网页(需root串口权限: sudo ./run.sh live-web)"
-  echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)"
+  echo "  build        编译 ESP32 固件(串口/WiFi/急停三版)
+  flash        烧录串口版固件到 ESP32(需 sudo: sudo ./run.sh flash)"
   echo "  validate     运行 MuJoCo 静态校验"
   echo "  simulate     用真实视频录制 MuJoCo 对比视频"
   echo ""
@@ -115,6 +116,10 @@ case "$CMD" in
   build)
     PIO="$HERE/G_chair_mujoco/.venv/bin/pio"
     (cd "$HERE/G_chair_esp32" && "$PIO" run && "$PIO" run -e esp32-s3-wifi && "$PIO" run -e esp32-s3-estop)
+    ;;
+  flash)
+    (cd "$HERE/G_chair_esp32" && "$PIO" run -e esp32-s3-devkitc-1 -t upload \
+      --upload-port "${1:-/dev/ttyUSB0}")
     ;;
   validate)
     (cd "$HERE/G_chair_mujoco" && "$PY" sim.py --validate)
