@@ -27,15 +27,7 @@ from motion_pipeline import MotionPipeline
 
 DT = 0.02
 # 缸号 -> 板/通道（实测 HARDWARE_MAP.md）
-CYL_TO_BOARD = {
-    # cyl: (board_index, channel)
-    0: (0, 0),   # 右前   -> 板1 ch0
-    5: (0, 1),   # 右中   -> 板1 ch1
-    4: (0, 2),   # 右后   -> 板1 ch2
-    3: (0, 3),   # 左后   -> 板1 ch3
-    2: (1, 0),   # 左中   -> 板2 ch0
-    1: (1, 1),   # 左前   -> 板2 ch1
-}
+from dual_mega_map import CYL_TO_BOARD
 
 
 def make_frames(disp_mm, base_steps, scale, max_mm):

@@ -27,7 +27,7 @@ from config import TELEMETRY_CHANNELS
 from motion_pipeline import MotionPipeline
 from udp_telemetry import parse_datagram
 
-CYL_TO_BOARD = {0: (0, 0), 5: (0, 1), 4: (0, 2), 3: (0, 3), 2: (1, 0), 1: (1, 1)}
+from dual_mega_map import CYL_TO_BOARD
 DT = 0.02
 MAX_MM_S = 110.0
 MAX_STEP = int(MAX_MM_S * DT / 0.005)   # 440 步/帧
