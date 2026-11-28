@@ -17,7 +17,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r G_chair_mujoco/requirements.txt
-      - name: Regression tests (85 cases)
+      - name: Regression tests (86 cases)
         run: |
           python tests/test_chain.py
           python tests/test_robustness.py

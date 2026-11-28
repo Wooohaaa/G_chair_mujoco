@@ -53,6 +53,7 @@ state = {
     'params': {},
     'recording': False,
     'manual_disp': None,   # 手动测试：设为 [6缸位移mm] 时绕过映射直接输出
+    'recover_from': None,  # 恢复遥测时的起始缸位移，用于限速回接避免跳变
 }
 _state_lock = threading.Lock()
 _rec_log = []
@@ -209,6 +210,17 @@ def pipeline_loop(args, motion, rx, sim):
             pose = np.zeros(6)
         else:
             pose, disp = motion.pose_and_disp(tele, DT)
+            # 从手动位姿回接遥测时按限速渐变，避免指令突跳（固件限速只管物理层）
+            rec = state.get('recover_from')
+            if rec is not None:
+                vmax = args.max_speed if args.max_speed > 0 else 110.0
+                step = max(vmax, 1.0) * DT
+                delta = disp - np.array(rec, dtype=float)
+                if np.max(np.abs(delta)) <= step:
+                    state['recover_from'] = None
+                else:
+                    disp = np.array(rec, dtype=float) + np.sign(delta) * np.minimum(
+                        np.abs(delta), step)
         lim = np.clip(disp, -95, 95)
 
         if args.mode == 'real' and args.output == 'wifi' and wifi_sock is not None:
@@ -316,6 +328,7 @@ async def ws_handler(websocket):
                 if name in presets:
                     with _state_lock:
                         state['manual_disp'] = presets[name][:]
+                        state['recover_from'] = None
             elif cmd == 'manual_mm':
                 disp = d.get('disp')
                 # Web 自定义输入必须严格校验，否则 null/NaN 会断开 WS 或污染 MuJoCo
@@ -328,12 +341,17 @@ async def ws_handler(websocket):
                                                for v in vals):
                         with _state_lock:
                             state['manual_disp'] = vals
+                            state['recover_from'] = None
             elif cmd == 'estop':
                 with _state_lock:
                     state['manual_disp'] = [0] * 6
+                    state['recover_from'] = None
             elif cmd == 'release':
                 with _state_lock:
+                    if state['manual_disp'] is not None:
+                        state['recover_from'] = list(state['manual_disp'])
                     state['manual_disp'] = None
+                    motion_ref.reset()   # 丢弃手动期间停滞的滤波/洗出状态
     finally:
         pusher.cancel()
 

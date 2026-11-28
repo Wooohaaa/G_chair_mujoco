@@ -72,6 +72,8 @@ def main():
                 await ws.send(json.dumps({'cmd': 'release'}))
                 s = await drain(3)
                 check('释放遥测', s['manual_disp'] is None)
+                check('限速回接不跳变', abs(s['disp_mm'][2]) > 12,
+                      '缸2=%.1fmm' % s['disp_mm'][2])
                 await ws.send(json.dumps({'cmd': 'param', 'lpf': 0.31, 'roll': 44}))
                 s = await drain(4)
                 check('参数下发', s['params']['lpf'] == 0.31 and s['params']['roll'] == 44.0,
