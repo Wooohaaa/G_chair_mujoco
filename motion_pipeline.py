@@ -195,6 +195,7 @@ class MotionPipeline:
         """断流后重置状态（低通/洗出/限速器回到初始），避免残留偏置。"""
         self._lp = {k: 0.0 for k in self._lp}
         self._lp_init = False
+        self.filt = FilterChain(FILTERS)   # 否则 accel_model=False 时 EMA 状态残留
         if self.accel_model:
             self.wo = Washout6D(self.washout_tau) if self.washout_tau > 0 else None
         if self.speed_limiter is not None:

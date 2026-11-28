@@ -80,9 +80,14 @@ def main():
                 await asyncio.sleep(0.3)
                 await ws.send(json.dumps({'cmd': 'record_stop'}))
                 await asyncio.sleep(1.0)
-                s = await drain(10)   # 多读几帧，确保拿到停止后的最新状态
+                s = await drain(10)   # 多读几帧，确保不断开且拿到最新状态
                 check('录制状态复位', s['recording'] is False,
                       'recording=%s' % s['recording'])
+                # 非法手动输入不能断开 WS，也不能污染手动保持状态
+                await ws.send(json.dumps({'cmd': 'manual_mm', 'disp': [None] * 6}))
+                s = await drain(3)
+                check('非法手动输入容错', s['manual_disp'] is None
+                      and s['mode'] == 'sim')
         asyncio.run(t())
     finally:
         proc.terminate()
@@ -111,6 +116,14 @@ def main():
         # cur0..5=19800步(+3mm)，tgt0..5=19200步(0mm)，锁存轴0/1
         frame = ('$' + ','.join(['19800'] * 6 + ['19200'] * 6) +
                  ',0,1,0,L3')
+        async def tw0():
+            import websockets
+            async with websockets.connect('ws://localhost:8993') as ws:
+                return json.loads(await asyncio.wait_for(ws.recv(), 3))
+        import asyncio
+        before = asyncio.run(tw0())
+        check('WiFi未收到状态不算连接', before['connected'] is False,
+              'connected=%s' % before['connected'])
         sock.sendto(frame.encode(), ('127.0.0.1', 8991))
 
         async def tw():
@@ -128,6 +141,7 @@ def main():
               ('cur0=%s 实际=%.2fmm latch=%s' %
                (s['hw']['cur'][0], (s['hw']['cur'][0] - 19200) * 0.005,
                 s['hw']['latch'])) if s else '未收到')
+        check('收到状态后标记连接', s is not None and s['connected'] is True)
     finally:
         proc2.terminate()
         try:

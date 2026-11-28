@@ -132,11 +132,13 @@ function sendParamDirect(){
 function update(s){
   // 醒目的安全告警条
   const alarm=document.getElementById('alarm');
-  const lim=s.hw.limit||0, wd=s.hw.watchdog||0, lost=s.lost||0;
+  const hw=s.hw||{};   // 必须先声明，否则下方 hw.estop 落入 TDZ 抛 ReferenceError
+  const lim=hw.limit||0, wd=hw.watchdog||0, lost=s.lost||0;
   const age=s.hw_age;
   let msgs=[];
   if(s.mode==='real' && !s.connected) msgs.push('⛔ 实机模式但未连接主控（检查串口/选择正确端口）');
   else if(s.mode==='real' && age>=0 && age>1.0) msgs.push('⛔ ESP32 状态回传中断 '+age.toFixed(1)+'s（检查串口/WiFi/供电）');
+  else if(s.mode==='real' && age<0 && (s.frames||0)>5) msgs.push('⛔ 从未收到 ESP32 状态回传（检查 IP/端口/固件是否发送 $ 帧）');
   if(s.tele_stale>1.0) msgs.push('⚠ 遥测数值停滞 '+s.tele_stale.toFixed(1)+'s（游戏暂停或 mod 卡死）');
   if(wd) msgs.push('⚠ 看门狗触发：平台回中位');
   if(hw.estop) msgs.push('🛑 软件急停触发：固件已禁能全部轴（检查急停 GPIO / 恢复后发 #E）');
@@ -151,7 +153,7 @@ function update(s){
     ' &nbsp; <b>帧数:</b> '+s.frames+' &nbsp; <b>断流帧:</b> '+s.lost+
     ' &nbsp; <b>串口:</b> '+(s.connected?'已连接':'未连接')+
     ' &nbsp; <b>状态帧:</b> '+s.hw.frames;
-  const hw=s.hw;
+
   let h='<div><span class="kv">使能</span><span class="'+(hw.enabled?'ok':'warnc')+'">'+(hw.enabled?'ON':'OFF')+'</span></div>';
   h+='<div><span class="kv">看门狗</span><span class="'+(hw.watchdog?'bad':'ok')+'">'+(hw.watchdog?'回中位':'正常')+'</span></div>';
   if(hw.estop!==undefined) h+='<div><span class="kv">软件急停</span><span class="'+(hw.estop?'bad':'ok')+'">'+(hw.estop?'触发':'正常')+'</span></div>';

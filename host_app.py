@@ -75,10 +75,10 @@ def parse_status_frame(t, hw):
     hw['limit'] = int(parts[12])
     hw['enabled'] = int(parts[13])
     hw['watchdog'] = int(parts[14])
-    if len(parts) >= 16 and parts[15][:1].isdigit():
-        hw['estop'] = int(parts[15])          # 旧/新急停版的第16字段
-    if len(parts) >= 16 and parts[-1].startswith('L'):
-        hw['latch'] = int(parts[-1][1:])      # 新固件末字段（L 前缀）
+    # 字段缺失时清零，避免刷回旧固件后旧的锁存/急停告警永久残留
+    hw['estop'] = int(parts[15]) if (len(parts) >= 16 and parts[15][:1].isdigit()) else 0
+    hw['latch'] = int(parts[-1][1:]) if (len(parts) >= 16
+                                         and parts[-1].startswith('L')) else 0
     return True
 
 
@@ -140,6 +140,7 @@ def wifi_status_rx_loop(port):
                     with _state_lock:
                         state['hw']['frames'] += 1
                         state['hw_last_status'] = time.time()
+                        state['connected'] = True   # 真正收到回传才算连接
             except (ValueError, IndexError):
                 pass
 
@@ -317,9 +318,16 @@ async def ws_handler(websocket):
                         state['manual_disp'] = presets[name][:]
             elif cmd == 'manual_mm':
                 disp = d.get('disp')
-                if disp and len(disp) == 6:
-                    with _state_lock:
-                        state['manual_disp'] = [float(x) for x in disp]
+                # Web 自定义输入必须严格校验，否则 null/NaN 会断开 WS 或污染 MuJoCo
+                if isinstance(disp, list) and len(disp) == 6:
+                    try:
+                        vals = [float(x) for x in disp]
+                    except (TypeError, ValueError):
+                        vals = None
+                    if vals is not None and all(np.isfinite(v) and abs(v) <= 95
+                                               for v in vals):
+                        with _state_lock:
+                            state['manual_disp'] = vals
             elif cmd == 'estop':
                 with _state_lock:
                     state['manual_disp'] = [0] * 6
@@ -406,8 +414,9 @@ async def main_async(args):
         # WiFi 模式：在 esp32_udp 端口收 ESP32 的状态回传（与上位机发帧同端口）
         threading.Thread(target=wifi_status_rx_loop,
                          args=(args.esp32_udp,), daemon=True).start()
+        # 未收到状态帧前不算“已连接”，否则死 IP 在 Web 上毫无告警
         with _state_lock:
-            state['connected'] = True
+            state['connected'] = False
 
     motion_ref = MotionPipeline(lpf_tau=args.lpf, washout_tau=args.washout,
                                 max_speed=args.max_speed)
@@ -548,10 +557,12 @@ def main():
     ap.add_argument('--check', action='store_true', help='只做启动自检后退出')
     args = ap.parse_args()
     if args.check:
-        self_check(args)
-    else:
-        self_check(args)
-        asyncio.run(main_async(args))
+        return 0 if self_check(args) else 1
+    if not self_check(args):
+        print('自检失败，拒绝启动（安全第一）')
+        return 1
+    asyncio.run(main_async(args))
+    return 0
 
 
 if __name__ == '__main__':

@@ -214,6 +214,7 @@ void setup() {
 
 // 文本命令（调试用，'#' 开头，与二进制帧和 '$' 状态帧区分）
 static String cmd_buf;
+static bool cmd_reading = false;   // '#' 起始的文本命令行状态
 static bool selftest_active = false;
 static int selftest_axis = 0, selftest_phase = 0;
 static unsigned long selftest_t = 0;
@@ -245,6 +246,7 @@ static void handle_text_cmd(const String &c) {
         Serial.println("OK enable");
     } else if (c == "#D") {
         manual_hold_until = 0;
+        selftest_active = false;   // 禁能时中止自检，避免继续空转脉冲
         enable_drivers(false); enabled = false;
         for (int i = 0; i < NUM_AXES; i++) rmt_stop(axes[i]);
         Serial.println("OK disable");
@@ -315,11 +317,23 @@ void loop() {
     int max_bytes = 32;
     while (Serial.available() && max_bytes-- > 0) {
         uint8_t b = (uint8_t)Serial.read();
-        if (b == '#') {
-            cmd_buf = "";
-            while (Serial.available()) cmd_buf += (char)Serial.read();
-            cmd_buf.trim();
-            handle_text_cmd(cmd_buf);
+        // 文本命令 '#...' 逐行解析：保留 '#' 前缀（handle_text_cmd 依赖它匹配），
+        // 且有长度上限，不会无限吞掉后续二进制指令帧。
+        if (b == '#' && !cmd_reading) {
+            cmd_reading = true;
+            cmd_buf = "#";
+            continue;
+        }
+        if (cmd_reading) {
+            if (b == '\n' || b == '\r') {
+                cmd_reading = false;
+                cmd_buf.trim();
+                handle_text_cmd(cmd_buf);
+            } else if (cmd_buf.length() < 32) {
+                cmd_buf += (char)b;
+            } else {
+                cmd_reading = false;   // 超长行丢弃，恢复帧解析
+            }
             continue;
         }
         parse_byte(b);

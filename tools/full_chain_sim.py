@@ -45,11 +45,16 @@ def main():
         print('找不到 %s' % path)
         return 1
 
+    # 兼容两种录制格式：capture_raw(25列无t) / record_paired(首列t)
+    with open(path, encoding='utf-8', errors='ignore') as f:
+        header = f.readline().strip().split(',')
+    offset = 1 if header and header[0].strip() == 't' else 0
     data = np.loadtxt(path, delimiter=',', skiprows=1)
     if data.ndim == 1:
         data = data.reshape(1, -1)
+    # 通道索引必须是 0,1,2,6,7,8：3-5 是 speed_x/z/y，不是角速度！
     keys = ['accel_x', 'accel_z', 'accel_y', 'rot_y', 'rot_x', 'rot_z']
-    # CSV 前 9 列顺序: accel_x,accel_z,accel_y,speed_x,speed_z,speed_y,rot_y,rot_x,rot_z
+    cols = [0, 1, 2, 6, 7, 8]
     print('=' * 60)
     print('全链路数值仿真: %s (%d 帧)' % (os.path.basename(path), min(limit, len(data))))
     print('=' * 60)
@@ -63,7 +68,7 @@ def main():
     speeds = []
 
     for row in data[:limit]:
-        tele = {k: float(row[j]) for j, k in enumerate(keys)}
+        tele = {k: float(row[offset + j]) for k, j in zip(keys, cols)}
         pose, disp = mp.pose_and_disp(tele, DT)
 
         # 走一遍与上位机完全相同的 <FF FF>+6×uint16 帧（含净化/量化）
